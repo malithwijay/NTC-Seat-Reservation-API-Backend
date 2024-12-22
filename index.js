@@ -14,7 +14,8 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        origin: process.env.FRONTEND_URL || '*', // Allow requests from frontend
+        //origin: process.env.FRONTEND_URL || '*', // Allow requests from frontend
+        origin: process.env.SWAGGER_URL || '*', // Allow Swagger or all origins
         methods: ['GET', 'POST', 'PUT', 'DELETE'], // Supported HTTP methods
         allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
     },
