@@ -32,15 +32,34 @@ module.exports = (io) => {
         const { userId, busId, seatNumber } = req.body;
 
         try {
-            const booking = new Booking({ userId, busId, seatNumber });
+            const bus = await Bus.findOne({ 'schedule._id': busId });
+            if (!bus) {
+                return res.status(404).json({ message: 'Bus schedule not found' });
+            }
+
+            const schedule = bus.schedule.id(busId);
+
+            // Check if the seat is already booked
+            if (schedule.bookedSeats.includes(seatNumber)) {
+                return res.status(400).json({ message: 'Seat already booked' });
+            }
+
+            // Update availability
+            schedule.bookedSeats.push(seatNumber);
+            schedule.availableSeats -= 1;
+
+            await bus.save();
+
+            // Save booking
+            const booking = new Booking({ userId, busId, seatNumber, status: 'confirmed' });
             await booking.save();
 
-            // Emit a real-time update
+            // Emit real-time update
             io.emit('bookingUpdate', { busId, seatNumber, status: 'reserved' });
 
-            res.json({ message: 'Booking created successfully' });
+            res.json({ message: 'Booking successful', busId, seatNumber });
         } catch (error) {
-            res.status(500).json({ error: 'Failed to create booking' });
+            res.status(500).json({ error: 'Failed to book seat', details: error.message });
         }
     });
 
