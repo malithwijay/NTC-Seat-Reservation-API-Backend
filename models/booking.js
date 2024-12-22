@@ -8,4 +8,5 @@ const BookingSchema = new mongoose.Schema({
     paymentStatus: { type: String, enum: ['paid', 'unpaid'], default: 'unpaid' },
 });
 
-module.exports = mongoose.model('Booking', BookingSchema);
+// Check if the model already exists to prevent OverwriteModelError
+module.exports = mongoose.models.Booking || mongoose.model('Booking', BookingSchema);

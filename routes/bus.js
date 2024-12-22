@@ -1,64 +1,30 @@
 const express = require('express');
 const Bus = require('../models/bus');
-
 const router = express.Router();
 
 /**
  * @swagger
- * /bus:
+ * /bus/route/{route}:
  *   get:
- *     summary: Get all buses
+ *     summary: Get buses for a specific route
  *     tags: [Bus]
+ *     parameters:
+ *       - in: path
+ *         name: route
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The route name
  *     responses:
  *       200:
- *         description: List of all buses
+ *         description: List of buses for the route
  */
-router.get('/', async (req, res) => {
+router.get('/route/:route', async (req, res) => {
     try {
-        const buses = await Bus.find();
+        const buses = await Bus.find({ route: req.params.route });
         res.json(buses);
     } catch (error) {
-        res.status(500).json({ error: 'Failed to retrieve buses' });
-    }
-});
-
-/**
- * @swagger
- * /bus:
- *   post:
- *     summary: Add a new bus
- *     tags: [Bus]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               busNumber:
- *                 type: string
- *               route:
- *                 type: string
- *               availableSeats:
- *                 type: number
- *               schedule:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: date-time
- *     responses:
- *       201:
- *         description: Bus added successfully
- */
-router.post('/', async (req, res) => {
-    const { busNumber, route, availableSeats, schedule } = req.body;
-
-    try {
-        const bus = new Bus({ busNumber, route, availableSeats, schedule });
-        await bus.save();
-        res.status(201).json({ message: 'Bus added successfully' });
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to add bus' });
+        res.status(500).json({ error: 'Failed to retrieve buses for route' });
     }
 });
 
