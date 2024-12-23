@@ -14,16 +14,37 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
-        //origin: process.env.FRONTEND_URL || '*', // Allow requests from frontend
-        origin: process.env.SWAGGER_URL || '*', // Allow Swagger or all origins
-        methods: ['GET', 'POST', 'PUT', 'DELETE'], // Supported HTTP methods
-        allowedHeaders: ['Content-Type', 'Authorization'], // Allowed headers
+        origin: [
+            process.env.SWAGGER_URL || '*', // Allow Swagger UI
+            process.env.FRONTEND_URL || '*', // Allow frontend
+        ],
+        methods: ['GET', 'POST', 'PUT', 'DELETE'],
+        allowedHeaders: ['Content-Type', 'Authorization'],
+        credentials: true,
     },
 });
 
 // Middleware
-app.use(cors({ origin: process.env.FRONTEND_URL || '*', credentials: true })); // Enable CORS for all origins temporarily
+app.use(cors({
+    origin: [
+        process.env.SWAGGER_URL || '*', // Allow Swagger UI
+        process.env.FRONTEND_URL || '*', // Allow frontend
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+}));
 app.use(bodyParser.json());
+
+// Handle CORS Preflight Requests
+app.options('*', cors({
+    origin: [
+        process.env.SWAGGER_URL || '*',
+        process.env.FRONTEND_URL || '*',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+}));
 
 // Routes
 app.use('/auth', require('./routes/auth'));

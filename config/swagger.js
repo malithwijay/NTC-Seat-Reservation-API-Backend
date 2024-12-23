@@ -11,7 +11,7 @@ const options = {
         },
         servers: [
             {
-                url: 'http://localhost:3000', // Update to your backend URL
+                url: process.env.SWAGGER_URL || 'http://localhost:3000', // Backend URL (env variable for production)
             },
         ],
         components: {
