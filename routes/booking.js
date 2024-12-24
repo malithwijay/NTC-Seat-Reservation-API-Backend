@@ -24,12 +24,16 @@ module.exports = (io) => {
      *                 type: string
      *               seatNumber:
      *                 type: number
+     *               startStop:
+     *                 type: string
+     *               endStop:
+     *                 type: string
      *     responses:
      *       200:
      *         description: Booking created successfully
      */
     router.post('/book', async (req, res) => {
-        const { userId, busId, seatNumber } = req.body;
+        const { userId, busId, seatNumber, startStop, endStop } = req.body;
 
         try {
             const bus = await Bus.findOne({ 'schedule._id': busId });
@@ -44,6 +48,26 @@ module.exports = (io) => {
                 return res.status(400).json({ message: 'Seat already booked' });
             }
 
+            // Validate stops
+            const stops = bus.stops.map((stop) => stop.name);
+            if (!stops.includes(startStop) || !stops.includes(endStop)) {
+                return res.status(400).json({ message: 'Invalid start or end stop' });
+            }
+
+            const startIndex = stops.indexOf(startStop);
+            const endIndex = stops.indexOf(endStop);
+            if (startIndex >= endIndex) {
+                return res.status(400).json({ message: 'Start stop must be before end stop' });
+            }
+
+            // Calculate fare
+            let fare = 0;
+            for (let i = startIndex; i < endIndex; i++) {
+                const stop = bus.stops[i];
+                const nextStop = bus.stops[i + 1];
+                fare += nextStop.fareNormal; // Assuming normal fare, adjust for bus type if needed
+            }
+
             // Update availability
             schedule.bookedSeats.push(seatNumber);
             schedule.availableSeats -= 1;
@@ -51,13 +75,28 @@ module.exports = (io) => {
             await bus.save();
 
             // Save booking
-            const booking = new Booking({ userId, busId, seatNumber, status: 'confirmed' });
+            const booking = new Booking({
+                userId,
+                busId,
+                seatNumber,
+                startStop,
+                endStop,
+                fare,
+                status: 'confirmed',
+            });
             await booking.save();
 
             // Emit real-time update
             io.emit('bookingUpdate', { busId, seatNumber, status: 'reserved' });
 
-            res.json({ message: 'Booking successful', busId, seatNumber });
+            res.json({
+                message: 'Booking successful',
+                busId,
+                seatNumber,
+                startStop,
+                endStop,
+                fare,
+            });
         } catch (error) {
             res.status(500).json({ error: 'Failed to book seat', details: error.message });
         }
