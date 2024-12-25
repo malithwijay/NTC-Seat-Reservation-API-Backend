@@ -1,5 +1,5 @@
 const express = require('express');
-const Bus = require('../models/bus');
+const BusController = require('../controllers/busController');
 
 const router = express.Router();
 
@@ -13,14 +13,7 @@ const router = express.Router();
  *       200:
  *         description: List of all buses
  */
-router.get('/', async (req, res) => {
-    try {
-        const buses = await Bus.find();
-        res.json(buses);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to retrieve buses' });
-    }
-});
+router.get('/', BusController.getAllBuses);
 
 /**
  * @swagger
@@ -39,14 +32,7 @@ router.get('/', async (req, res) => {
  *       200:
  *         description: List of buses for the route
  */
-router.get('/route/:route', async (req, res) => {
-    try {
-        const buses = await Bus.find({ route: req.params.route });
-        res.json(buses);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to retrieve buses for the route' });
-    }
-});
+router.get('/route/:route', BusController.getBusesByRoute);
 
 /**
  * @swagger
@@ -65,16 +51,6 @@ router.get('/route/:route', async (req, res) => {
  *       200:
  *         description: Bus details
  */
-router.get('/:id', async (req, res) => {
-    try {
-        const bus = await Bus.findById(req.params.id);
-        if (!bus) {
-            return res.status(404).json({ message: 'Bus not found' });
-        }
-        res.json(bus);
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to retrieve bus details' });
-    }
-});
+router.get('/:id', BusController.getBusById);
 
 module.exports = router;

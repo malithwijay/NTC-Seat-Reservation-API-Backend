@@ -1,41 +1,8 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
-const Bus = require('../models/bus');
-const crypto = require('crypto');
+const adminController = require('../controllers/adminController');
 
 const router = express.Router();
-
-/**
- * Generate a unique permit ID for buses
- */
-const generateUniquePermit = () => {
-    return crypto.randomBytes(8).toString('hex');
-};
-
-/**
- * Generate stops with all combinations and fares based on the provided stops
- */
-const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
-    const stopPairs = [];
-    const totalStops = stops.length;
-
-    for (let i = 0; i < totalStops; i++) {
-        for (let j = i + 1; j < totalStops; j++) {
-            const distance = stops[j].distance - stops[i].distance;
-            const fareNormal = Math.ceil((priceNormal / stops[totalStops - 1].distance) * distance);
-            const fareLuxury = Math.ceil((priceLuxury / stops[totalStops - 1].distance) * distance);
-
-            stopPairs.push({
-                name: `${stops[i].name} to ${stops[j].name}`,
-                distance,
-                fareNormal,
-                fareLuxury,
-            });
-        }
-    }
-
-    return stopPairs;
-};
 
 /**
  * @swagger
@@ -62,7 +29,6 @@ const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
  *                 type: number
  *               operatorId:
  *                 type: string
- *                 description: The ID of the operator managing the bus
  *               stops:
  *                 type: array
  *                 items:
@@ -79,7 +45,7 @@ const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
  *                   properties:
  *                     date:
  *                       type: string
- *                       format: date-time
+ *                     format: date-time
  *                     time:
  *                       type: string
  *                     availableSeats:
@@ -88,69 +54,7 @@ const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
  *       201:
  *         description: Route or bus added successfully
  */
-router.post('/route', authenticate, authorize(['admin']), async (req, res) => {
-    const { busNumber, route, priceNormal, priceLuxury, operatorId, stops, schedule } = req.body;
-
-    try {
-        if (
-            !busNumber ||
-            !route ||
-            !priceNormal ||
-            !priceLuxury ||
-            !stops ||
-            !Array.isArray(stops) ||
-            !schedule ||
-            !Array.isArray(schedule)
-        ) {
-            return res.status(400).json({ message: 'Invalid input. All fields are required.' });
-        }
-
-        const existingRoute = await Bus.findOne({ route });
-
-        if (existingRoute) {
-            const existingBus = await Bus.findOne({ route, busNumber });
-            if (existingBus) {
-                return res.status(400).json({ message: 'Bus with this number already exists for the route.' });
-            }
-
-            const generatedStops = generateStopsWithFares(stops, priceNormal, priceLuxury);
-
-            const newBus = new Bus({
-                busNumber,
-                route,
-                priceNormal,
-                priceLuxury,
-                operatorId,
-                stops: generatedStops,
-                schedule,
-                permitId: generateUniquePermit(),
-                permitStatus: 'pending',
-            });
-            await newBus.save();
-            return res.status(201).json({ message: 'New bus added to the existing route', bus: newBus });
-        }
-
-        const generatedStops = generateStopsWithFares(stops, priceNormal, priceLuxury);
-
-        const newRoute = new Bus({
-            busNumber,
-            route,
-            priceNormal,
-            priceLuxury,
-            operatorId,
-            stops: generatedStops,
-            schedule,
-            permitId: generateUniquePermit(),
-            permitStatus: 'pending',
-        });
-        await newRoute.save();
-
-        res.status(201).json({ message: 'New route and bus added successfully', bus: newRoute });
-    } catch (error) {
-        console.error('Error in /admin/route:', error.message);
-        res.status(500).json({ message: 'Failed to add route or bus', error: error.message });
-    }
-});
+router.post('/route', authenticate, authorize(['admin']), adminController.addRoute);
 
 /**
  * @swagger
@@ -163,18 +67,8 @@ router.post('/route', authenticate, authorize(['admin']), async (req, res) => {
  *     responses:
  *       200:
  *         description: List of all routes and buses
- *       500:
- *         description: Internal server error
  */
-router.get('/routes', authenticate, authorize(['admin']), async (req, res) => {
-    try {
-        const routes = await Bus.find();
-        res.status(200).json(routes);
-    } catch (error) {
-        console.error('Error in /admin/routes:', error.message);
-        res.status(500).json({ message: 'Failed to retrieve routes and buses', error: error.message });
-    }
-});
+router.get('/routes', authenticate, authorize(['admin']), adminController.getRoutes);
 
 /**
  * @swagger
@@ -210,29 +104,7 @@ router.get('/routes', authenticate, authorize(['admin']), async (req, res) => {
  *       200:
  *         description: Stops updated successfully
  */
-router.put('/bus/:id/stops', authenticate, authorize(['admin']), async (req, res) => {
-    const { id } = req.params;
-    const { stops } = req.body;
-
-    try {
-        if (!stops || !Array.isArray(stops)) {
-            return res.status(400).json({ message: 'Invalid input. Stops must be an array.' });
-        }
-
-        const bus = await Bus.findById(id);
-        if (!bus) {
-            return res.status(404).json({ message: 'Bus not found.' });
-        }
-
-        bus.stops = stops;
-        await bus.save();
-
-        res.status(200).json({ message: 'Stops updated successfully', bus });
-    } catch (error) {
-        console.error('Error updating stops:', error.message);
-        res.status(500).json({ message: 'Failed to update stops', error: error.message });
-    }
-});
+router.put('/bus/:id/stops', authenticate, authorize(['admin']), adminController.updateStops);
 
 /**
  * @swagger
@@ -248,7 +120,6 @@ router.put('/bus/:id/stops', authenticate, authorize(['admin']), async (req, res
  *         required: true
  *         schema:
  *           type: string
- *         description: The ID of the bus to update permit
  *     requestBody:
  *       required: true
  *       content:
@@ -263,32 +134,6 @@ router.put('/bus/:id/stops', authenticate, authorize(['admin']), async (req, res
  *       200:
  *         description: Permit updated successfully
  */
-router.put('/permit/:busId', authenticate, authorize(['admin']), async (req, res) => {
-    const { busId } = req.params;
-    const { permitStatus } = req.body;
-
-    if (!['granted', 'revoked'].includes(permitStatus)) {
-        return res.status(400).json({ message: 'Invalid permit status. Must be "granted" or "revoked".' });
-    }
-
-    try {
-        const bus = await Bus.findById(busId);
-        if (!bus) {
-            return res.status(404).json({ message: 'Bus not found.' });
-        }
-
-        if (!bus.permitId) {
-            bus.permitId = generateUniquePermit();
-        }
-
-        bus.permitStatus = permitStatus;
-        await bus.save();
-
-        res.status(200).json({ message: `Permit ${permitStatus} successfully`, bus });
-    } catch (error) {
-        console.error('Error updating permit status:', error.message);
-        res.status(500).json({ message: 'Failed to update permit status', error: error.message });
-    }
-});
+router.put('/permit/:busId', authenticate, authorize(['admin']), adminController.updatePermitStatus);
 
 module.exports = router;

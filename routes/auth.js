@@ -1,22 +1,7 @@
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const Joi = require('joi');
-const User = require('../models/user');
+const authController = require('../controllers/authController');
 
 const router = express.Router();
-
-const registerSchema = Joi.object({
-    name: Joi.string().min(3).required(),
-    email: Joi.string().email().required(),
-    password: Joi.string().min(6).required(),
-    role: Joi.string().valid('commuter', 'operator', 'admin').default('commuter'),
-});
-
-const loginSchema = Joi.object({
-    email: Joi.string().email().required(),
-    password: Joi.string().min(6).required(),
-});
 
 /**
  * @swagger
@@ -53,23 +38,7 @@ const loginSchema = Joi.object({
  *             example:
  *               message: "Validation error or user already exists"
  */
-router.post('/register', async (req, res) => {
-    try {
-        const { name, email, password, role } = await registerSchema.validateAsync(req.body);
-
-        const existingUser = await User.findOne({ email });
-        if (existingUser) {
-            return res.status(400).json({ message: 'User already exists' });
-        }
-
-        const hashedPassword = await bcrypt.hash(password, 10);
-        const user = new User({ name, email, password: hashedPassword, role });
-        await user.save();
-        res.json({ message: 'User registered successfully' });
-    } catch (error) {
-        res.status(400).json({ error: error.details[0].message });
-    }
-});
+router.post('/register', authController.registerUser);
 
 /**
  * @swagger
@@ -102,24 +71,6 @@ router.post('/register', async (req, res) => {
  *             example:
  *               message: "Invalid credentials"
  */
-router.post('/login', async (req, res) => {
-    try {
-        const { email, password } = await loginSchema.validateAsync(req.body);
-
-        const user = await User.findOne({ email });
-        if (!user || !(await bcrypt.compare(password, user.password))) {
-            return res.status(401).json({ message: 'Invalid credentials' });
-        }
-
-        const token = jwt.sign(
-            { userId: user._id, role: user.role },
-            process.env.JWT_SECRET,
-            { expiresIn: '1h' }
-        );
-        res.json({ token });
-    } catch (error) {
-        res.status(400).json({ error: error.details[0].message });
-    }
-});
+router.post('/login', authController.loginUser);
 
 module.exports = router;
