@@ -1,5 +1,4 @@
 const express = require('express');
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
 const Booking = require('../models/booking');
 const Bus = require('../models/bus');
 const { authenticate } = require('../middleware/authMiddleware');
@@ -10,62 +9,45 @@ const router = express.Router();
  * @swagger
  * /payment/create-checkout-session:
  *   post:
- *     summary: Create a Stripe checkout session for the logged-in user's booking
+ *     summary: Create a payment process for all unpaid bookings of the logged-in user
  *     tags: [Payment]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Checkout session created
+ *         description: Create checkout session created for all unpaid bookings
  */
 router.post('/create-checkout-session', authenticate, async (req, res) => {
     try {
-        // Fetch the user's latest booking
         const userId = req.user.userId; // Extracted from JWT in the authenticate middleware
-        const booking = await Booking.findOne({ userId, paymentStatus: 'unpaid' }).populate('busId');
 
-        if (!booking) {
-            return res.status(404).json({ message: 'No unpaid booking found for the user' });
+        // Fetch all unpaid bookings for the user
+        const bookings = await Booking.find({ userId, paymentStatus: 'unpaid' }).populate('busId');
+
+        if (!bookings || bookings.length === 0) {
+            return res.status(404).json({ message: 'No unpaid bookings found for the user' });
         }
 
-        // Fetch bus and schedule details
-        const bus = await Bus.findById(booking.busId);
-        if (!bus) {
-            return res.status(404).json({ message: 'Bus not found for the booking' });
-        }
+        // Aggregate total fare for all unpaid bookings
+        const totalFare = bookings.reduce((sum, booking) => sum + booking.fare, 0);
 
-        const schedule = bus.schedule.id(booking.busId);
-        if (!schedule) {
-            return res.status(404).json({ message: 'Bus schedule not found' });
-        }
+        // Create checkout session details
+        const sessionDetails = bookings.map((booking) => ({
+            bookingId: booking._id,
+            busNumber: booking.busId?.busNumber || 'Unknown',
+            route: booking.busId?.route || 'Unknown',
+            seats: booking.seatNumbers,
+            fare: booking.fare,
+        }));
 
-        // Assume a fixed price per seat; replace with dynamic pricing logic if needed
-        const price = 10;
-
-        // Create Stripe checkout session
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            line_items: [
-                {
-                    price_data: {
-                        currency: 'usd',
-                        product_data: {
-                            name: `Seat Reservation for ${bus.busNumber} on ${schedule.date} at ${schedule.time}`,
-                        },
-                        unit_amount: price * 100, // Price in cents
-                    },
-                    quantity: 1,
-                },
-            ],
-            mode: 'payment',
-            success_url: `${process.env.FRONTEND_URL}/success?session_id={CHECKOUT_SESSION_ID}`,
-            cancel_url: `${process.env.FRONTEND_URL}/cancel`,
+        res.json({
+            message: 'checkout session created',
+            totalFare,
+            sessionDetails,
         });
-
-        res.json({ url: session.url });
     } catch (error) {
-        console.error('Error creating checkout session:', error);
-        res.status(500).json({ error: 'Failed to create checkout session' });
+        console.error('Error creating checkout session:', error.message);
+        res.status(500).json({ error: 'Failed to create checkout session', details: error.message });
     }
 });
 
@@ -73,7 +55,7 @@ router.post('/create-checkout-session', authenticate, async (req, res) => {
  * @swagger
  * /payment/success:
  *   post:
- *     summary: Handle payment success and update booking status
+ *     summary: Simulate a successful payment and update all unpaid bookings
  *     tags: [Payment]
  *     requestBody:
  *       required: true
@@ -82,37 +64,40 @@ router.post('/create-checkout-session', authenticate, async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               sessionId:
- *                 type: string
+ *               confirmAll:
+ *                 type: boolean
+ *                 description: Confirm all unpaid bookings
  *     responses:
  *       200:
- *         description: Payment successful and booking updated
+ *         description: Payment successful
  */
 router.post('/success', authenticate, async (req, res) => {
     try {
-        const { sessionId } = req.body;
+        const { confirmAll } = req.body;
 
-        // Verify the session ID with Stripe
-        const session = await stripe.checkout.sessions.retrieve(sessionId);
-        if (!session || session.payment_status !== 'paid') {
-            return res.status(400).json({ message: 'Payment not successful' });
+        if (!confirmAll) {
+            return res.status(400).json({ message: 'Payment confirmation is required' });
         }
 
-        // Update booking status to "paid"
-        const booking = await Booking.findOneAndUpdate(
-            { userId: req.user.userId, paymentStatus: 'unpaid' },
-            { paymentStatus: 'paid', status: 'confirmed' },
-            { new: true }
+        const userId = req.user.userId;
+
+        // Update all unpaid bookings for the user
+        const updatedBookings = await Booking.updateMany(
+            { userId, paymentStatus: 'unpaid' },
+            { paymentStatus: 'paid', status: 'confirmed' }
         );
 
-        if (!booking) {
-            return res.status(404).json({ message: 'Booking not found or already paid' });
+        if (updatedBookings.matchedCount === 0) {
+            return res.status(404).json({ message: 'No unpaid bookings found or already paid' });
         }
 
-        res.json({ message: 'Payment successful, booking updated', booking });
+        res.json({
+            message: 'payment successful, all unpaid bookings updated',
+            updatedBookings: updatedBookings.matchedCount,
+        });
     } catch (error) {
-        console.error('Error processing payment success:', error);
-        res.status(500).json({ error: 'Failed to process payment success' });
+        console.error('Error processing payment :', error.message);
+        res.status(500).json({ error: 'Failed to process payment', details: error.message });
     }
 });
 
