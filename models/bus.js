@@ -2,10 +2,10 @@ const mongoose = require('mongoose');
 
 // Schema for stops
 const StopSchema = new mongoose.Schema({
-    name: { type: String, required: true }, // Name of the stop
-    distance: { type: Number, required: true }, // Distance from the starting point (in km)
-    fareNormal: { type: Number, required: true }, // Fare for normal buses to this stop
-    fareLuxury: { type: Number, required: true }, // Fare for luxury buses to this stop
+    name: { type: String, required: true },
+    distance: { type: Number, required: true },
+    fareNormal: { type: Number, required: true },
+    fareLuxury: { type: Number, required: true },
 });
 
 // Schema for schedule
@@ -13,18 +13,20 @@ const ScheduleSchema = new mongoose.Schema({
     date: { type: Date, required: true },
     time: { type: String, required: true },
     availableSeats: { type: Number, default: 40 },
-    bookedSeats: { type: [Number], default: [] }, // Array of booked seat numbers
+    bookedSeats: { type: [Number], default: [] },
 });
 
 // Main bus schema
 const BusSchema = new mongoose.Schema({
     busNumber: { type: String, required: true },
-    operatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null }, // Reference to the operator managing the bus
-    route: { type: String, required: true }, // Route name (e.g., "Colombo to Kandy")
-    stops: { type: [StopSchema], required: true }, // Array of stops along the route
-    priceNormal: { type: Number, required: true }, // Full route fare for normal buses
-    priceLuxury: { type: Number, required: true }, // Full route fare for luxury buses
-    schedule: { type: [ScheduleSchema], required: true }, // Array of schedules for the bus
+    operatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    route: { type: String, required: true },
+    stops: { type: [StopSchema], required: true },
+    priceNormal: { type: Number, required: true },
+    priceLuxury: { type: Number, required: true },
+    schedule: { type: [ScheduleSchema], required: true },
+    permitId: { type: String, default: null }, 
+    permitStatus: { type: String, enum: ['pending', 'granted', 'revoked'], default: 'pending' },
 });
 
 module.exports = mongoose.models.Bus || mongoose.model('Bus', BusSchema);

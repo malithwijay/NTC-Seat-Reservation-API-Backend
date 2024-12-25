@@ -1,8 +1,16 @@
 const express = require('express');
 const { authenticate, authorize } = require('../middleware/authMiddleware');
 const Bus = require('../models/bus');
+const crypto = require('crypto');
 
 const router = express.Router();
+
+/**
+ * Generate a unique permit ID for buses
+ */
+const generateUniquePermit = () => {
+    return crypto.randomBytes(8).toString('hex');
+};
 
 /**
  * Generate stops with all combinations and fares based on the provided stops
@@ -52,6 +60,9 @@ const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
  *                 type: number
  *               priceLuxury:
  *                 type: number
+ *               operatorId:
+ *                 type: string
+ *                 description: The ID of the operator managing the bus
  *               stops:
  *                 type: array
  *                 items:
@@ -76,13 +87,9 @@ const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
  *     responses:
  *       201:
  *         description: Route or bus added successfully
- *       400:
- *         description: Validation error
- *       500:
- *         description: Internal server error
  */
 router.post('/route', authenticate, authorize(['admin']), async (req, res) => {
-    const { busNumber, route, priceNormal, priceLuxury, stops, schedule } = req.body;
+    const { busNumber, route, priceNormal, priceLuxury, operatorId, stops, schedule } = req.body;
 
     try {
         if (
@@ -113,8 +120,11 @@ router.post('/route', authenticate, authorize(['admin']), async (req, res) => {
                 route,
                 priceNormal,
                 priceLuxury,
+                operatorId,
                 stops: generatedStops,
                 schedule,
+                permitId: generateUniquePermit(),
+                permitStatus: 'pending',
             });
             await newBus.save();
             return res.status(201).json({ message: 'New bus added to the existing route', bus: newBus });
@@ -127,8 +137,11 @@ router.post('/route', authenticate, authorize(['admin']), async (req, res) => {
             route,
             priceNormal,
             priceLuxury,
+            operatorId,
             stops: generatedStops,
             schedule,
+            permitId: generateUniquePermit(),
+            permitStatus: 'pending',
         });
         await newRoute.save();
 
@@ -165,9 +178,9 @@ router.get('/routes', authenticate, authorize(['admin']), async (req, res) => {
 
 /**
  * @swagger
- * /admin/bus/{id}:
+ * /admin/bus/{id}/stops:
  *   put:
- *     summary: Update all details of a bus
+ *     summary: Update stops for a specific bus
  *     tags: [Admin]
  *     security:
  *       - bearerAuth: []
@@ -177,7 +190,6 @@ router.get('/routes', authenticate, authorize(['admin']), async (req, res) => {
  *         required: true
  *         schema:
  *           type: string
- *         description: Bus ID
  *     requestBody:
  *       required: true
  *       content:
@@ -185,16 +197,6 @@ router.get('/routes', authenticate, authorize(['admin']), async (req, res) => {
  *           schema:
  *             type: object
  *             properties:
- *               busNumber:
- *                 type: string
- *               operatorId:
- *                 type: string
- *               route:
- *                 type: string
- *               priceNormal:
- *                 type: number
- *               priceLuxury:
- *                 type: number
  *               stops:
  *                 type: array
  *                 items:
@@ -204,39 +206,11 @@ router.get('/routes', authenticate, authorize(['admin']), async (req, res) => {
  *                       type: string
  *                     distance:
  *                       type: number
- *                     fareNormal:
- *                       type: number
- *                     fareLuxury:
- *                       type: number
- *               schedule:
- *                 type: array
- *                 items:
- *                   type: object
- *                   properties:
- *                     _id:
- *                       type: string
- *                     date:
- *                       type: string
- *                       format: date-time
- *                     time:
- *                       type: string
- *                     availableSeats:
- *                       type: number
- *                     bookedSeats:
- *                       type: array
- *                       items:
- *                         type: number
  *     responses:
  *       200:
- *         description: Bus details updated successfully
- *       400:
- *         description: Validation error
- *       404:
- *         description: Bus not found
- *       500:
- *         description: Internal server error
+ *         description: Stops updated successfully
  */
-router.put('/bus/:id/stops', authenticate, authorize(['operator', 'admin']), async (req, res) => {
+router.put('/bus/:id/stops', authenticate, authorize(['admin']), async (req, res) => {
     const { id } = req.params;
     const { stops } = req.body;
 
@@ -250,16 +224,7 @@ router.put('/bus/:id/stops', authenticate, authorize(['operator', 'admin']), asy
             return res.status(404).json({ message: 'Bus not found.' });
         }
 
-        // Append or update stops
-        stops.forEach((newStop) => {
-            const existingStop = bus.stops.find(
-                (stop) => stop.name === newStop.name && stop.distance === newStop.distance
-            );
-            if (!existingStop) {
-                bus.stops.push(newStop);
-            }
-        });
-
+        bus.stops = stops;
         await bus.save();
 
         res.status(200).json({ message: 'Stops updated successfully', bus });
@@ -269,5 +234,61 @@ router.put('/bus/:id/stops', authenticate, authorize(['operator', 'admin']), asy
     }
 });
 
+/**
+ * @swagger
+ * /admin/permit/{busId}:
+ *   put:
+ *     summary: Grant or revoke a permit for a bus
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: busId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The ID of the bus to update permit
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               permitStatus:
+ *                 type: string
+ *                 enum: [granted, revoked]
+ *     responses:
+ *       200:
+ *         description: Permit updated successfully
+ */
+router.put('/permit/:busId', authenticate, authorize(['admin']), async (req, res) => {
+    const { busId } = req.params;
+    const { permitStatus } = req.body;
+
+    if (!['granted', 'revoked'].includes(permitStatus)) {
+        return res.status(400).json({ message: 'Invalid permit status. Must be "granted" or "revoked".' });
+    }
+
+    try {
+        const bus = await Bus.findById(busId);
+        if (!bus) {
+            return res.status(404).json({ message: 'Bus not found.' });
+        }
+
+        if (!bus.permitId) {
+            bus.permitId = generateUniquePermit();
+        }
+
+        bus.permitStatus = permitStatus;
+        await bus.save();
+
+        res.status(200).json({ message: `Permit ${permitStatus} successfully`, bus });
+    } catch (error) {
+        console.error('Error updating permit status:', error.message);
+        res.status(500).json({ message: 'Failed to update permit status', error: error.message });
+    }
+});
 
 module.exports = router;

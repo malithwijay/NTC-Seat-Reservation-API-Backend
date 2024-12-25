@@ -5,6 +5,31 @@ const Bus = require('../models/bus');
 const router = express.Router();
 
 /**
+ * Generate stops with all combinations and fares based on the provided stops
+ */
+const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
+    const stopPairs = [];
+    const totalStops = stops.length;
+
+    for (let i = 0; i < totalStops; i++) {
+        for (let j = i + 1; j < totalStops; j++) {
+            const distance = stops[j].distance - stops[i].distance;
+            const fareNormal = Math.ceil((priceNormal / stops[totalStops - 1].distance) * distance);
+            const fareLuxury = Math.ceil((priceLuxury / stops[totalStops - 1].distance) * distance);
+
+            stopPairs.push({
+                name: `${stops[i].name} to ${stops[j].name}`,
+                distance,
+                fareNormal,
+                fareLuxury,
+            });
+        }
+    }
+
+    return stopPairs;
+};
+
+/**
  * @swagger
  * /operator/bus/{id}:
  *   get:
@@ -171,7 +196,9 @@ router.put('/bus/:id/stops', authenticate, authorize(['operator', 'admin']), asy
             return res.status(403).json({ message: 'Access denied. You are not authorized to update this bus stops.' });
         }
 
-        bus.stops = stops;
+        const updatedStops = generateStopsWithFares(stops, bus.priceNormal, bus.priceLuxury);
+
+        bus.stops = updatedStops;
         await bus.save();
 
         res.status(200).json({ message: 'Stops updated successfully', bus });
@@ -324,12 +351,14 @@ router.put('/bus/:id/details', authenticate, authorize(['operator', 'admin']), a
             return res.status(403).json({ message: 'Access denied. You are not authorized to update this bus.' });
         }
 
+        const updatedStops = generateStopsWithFares(stops, priceNormal, priceLuxury);
+
         bus.busNumber = busNumber;
         bus.operatorId = operatorId || bus.operatorId;
         bus.route = route;
         bus.priceNormal = priceNormal;
         bus.priceLuxury = priceLuxury;
-        bus.stops = stops;
+        bus.stops = updatedStops;
         bus.schedule = schedule;
 
         await bus.save();
@@ -338,6 +367,34 @@ router.put('/bus/:id/details', authenticate, authorize(['operator', 'admin']), a
     } catch (error) {
         console.error('Error updating bus details:', error.message);
         res.status(500).json({ message: 'Failed to update bus details', error: error.message });
+    }
+});
+
+/**
+ * @swagger
+ * /operator/permit/status:
+ *   get:
+ *     summary: View permit status of buses
+ *     tags: [Operator]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Permit status retrieved successfully
+ */
+router.get('/permit/status', authenticate, authorize(['operator']), async (req, res) => {
+    try {
+        const buses = await Bus.find({ operatorId: req.user.userId });
+        const permitStatus = buses.map((bus) => ({
+            busNumber: bus.busNumber,
+            permitId: bus.permitId,
+            permitStatus: bus.permitStatus,
+        }));
+
+        res.status(200).json({ message: 'Permit status retrieved successfully', permitStatus });
+    } catch (error) {
+        console.error('Error fetching permit status:', error.message);
+        res.status(500).json({ message: 'Failed to fetch permit status', error: error.message });
     }
 });
 
