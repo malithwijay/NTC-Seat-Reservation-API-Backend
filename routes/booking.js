@@ -9,7 +9,7 @@ module.exports = (io) => {
      * @swagger
      * /booking/book:
      *   post:
-     *     summary: Book a seat
+     *     summary: Book one or more seats
      *     tags: [Booking]
      *     requestBody:
      *       required: true
@@ -22,83 +22,101 @@ module.exports = (io) => {
      *                 type: string
      *               busId:
      *                 type: string
-     *               seatNumber:
-     *                 type: number
+     *               seatNumbers:
+     *                 type: array
+     *                 items:
+     *                   type: number
      *               startStop:
      *                 type: string
-     *               endStop:
+     *                 description: Combined start and end stop in the format "Start Stop to End Stop"
+     *               busType:
      *                 type: string
+     *                 enum: [normal, luxury]
+     *               time:
+     *                 type: string
+     *                 description: Time of the scheduled trip
      *     responses:
      *       200:
      *         description: Booking created successfully
      */
     router.post('/book', async (req, res) => {
-        const { userId, busId, seatNumber, startStop, endStop } = req.body;
+        const { userId, busId, seatNumbers, startStop, busType, time } = req.body;
 
         try {
-            const bus = await Bus.findOne({ 'schedule._id': busId });
+            // Validate bus type
+            if (!['normal', 'luxury'].includes(busType)) {
+                return res.status(400).json({ message: 'Invalid bus type. Must be "normal" or "luxury".' });
+            }
+
+            // Fetch the bus
+            const bus = await Bus.findById(busId);
             if (!bus) {
-                return res.status(404).json({ message: 'Bus schedule not found' });
+                return res.status(404).json({ message: 'Bus not found' });
             }
 
-            const schedule = bus.schedule.id(busId);
-
-            // Check if the seat is already booked
-            if (schedule.bookedSeats.includes(seatNumber)) {
-                return res.status(400).json({ message: 'Seat already booked' });
+            // Validate startStop as a whole
+            const validStops = bus.stops.map((stop) => stop.name);
+            if (!validStops.includes(startStop)) {
+                return res.status(400).json({
+                    message: `Invalid startStop: ${startStop}. Available stops: ${validStops.join(', ')}`,
+                });
             }
 
-            // Validate stops
-            const stops = bus.stops.map((stop) => stop.name);
-            if (!stops.includes(startStop) || !stops.includes(endStop)) {
-                return res.status(400).json({ message: 'Invalid start or end stop' });
+            // Find the stop details
+            const stopDetails = bus.stops.find((stop) => stop.name === startStop);
+            const fare = busType === 'luxury' ? stopDetails.fareLuxury : stopDetails.fareNormal;
+
+            // Validate schedule
+            const schedule = bus.schedule.find((s) => s.time === time);
+            if (!schedule) {
+                return res.status(400).json({ message: 'Invalid time. No trip is scheduled for the selected time.' });
             }
 
-            const startIndex = stops.indexOf(startStop);
-            const endIndex = stops.indexOf(endStop);
-            if (startIndex >= endIndex) {
-                return res.status(400).json({ message: 'Start stop must be before end stop' });
+            // Validate seat availability
+            for (const seat of seatNumbers) {
+                if (schedule.bookedSeats.includes(seat)) {
+                    return res.status(400).json({ message: `Seat ${seat} is already booked.` });
+                }
             }
 
-            // Calculate fare
-            let fare = 0;
-            for (let i = startIndex; i < endIndex; i++) {
-                const stop = bus.stops[i];
-                const nextStop = bus.stops[i + 1];
-                fare += nextStop.fareNormal; // Assuming normal fare, adjust for bus type if needed
+            // Update bus schedule atomically
+            const updatedBus = await Bus.findOneAndUpdate(
+                { _id: busId, 'schedule.time': time },
+                {
+                    $inc: { 'schedule.$.availableSeats': -seatNumbers.length },
+                    $push: { 'schedule.$.bookedSeats': { $each: seatNumbers } },
+                },
+                { new: true }
+            );
+            if (!updatedBus) {
+                return res.status(500).json({ message: 'Failed to update bus schedule.' });
             }
 
-            // Update availability
-            schedule.bookedSeats.push(seatNumber);
-            schedule.availableSeats -= 1;
-
-            await bus.save();
-
-            // Save booking
+            // Save a single booking document
             const booking = new Booking({
                 userId,
                 busId,
-                seatNumber,
+                seatNumbers, // Store all seats in an array
                 startStop,
-                endStop,
-                fare,
+                fare: fare * seatNumbers.length, // Calculate total fare for all seats
+                busType,
+                tripTime: time,
                 status: 'confirmed',
             });
             await booking.save();
 
-            // Emit real-time update
-            io.emit('bookingUpdate', { busId, seatNumber, status: 'reserved' });
+            // Emit real-time update for each seat
+            seatNumbers.forEach((seat) => {
+                io.emit('bookingUpdate', { busId, seatNumber: seat, status: 'reserved' });
+            });
 
             res.json({
                 message: 'Booking successful',
-                busId,
-                seatNumber,
-                startStop,
-                endStop,
-                fare,
+                booking,
             });
         } catch (error) {
-            res.status(500).json({ error: 'Failed to book seat', details: error.message });
+            console.error('Error creating booking:', error.message);
+            res.status(500).json({ error: 'Failed to book seat(s)', details: error.message });
         }
     });
 
@@ -121,9 +139,10 @@ module.exports = (io) => {
      */
     router.get('/user/:userId', async (req, res) => {
         try {
-            const bookings = await Booking.find({ userId: req.params.userId });
+            const bookings = await Booking.find({ userId: req.params.userId }).populate('busId', 'route');
             res.json(bookings);
         } catch (error) {
+            console.error('Error fetching bookings:', error.message);
             res.status(500).json({ error: 'Failed to retrieve bookings' });
         }
     });
