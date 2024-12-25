@@ -6,6 +6,52 @@ const router = express.Router();
 
 /**
  * @swagger
+ * /operator/bus/{id}:
+ *   get:
+ *     summary: Get details of a specific bus
+ *     tags: [Operator, Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Bus ID
+ *     responses:
+ *       200:
+ *         description: Bus details retrieved successfully
+ *       404:
+ *         description: Bus not found
+ *       403:
+ *         description: Access denied
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/bus/:id', authenticate, authorize(['operator', 'admin']), async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const bus = await Bus.findById(id);
+        if (!bus) {
+            return res.status(404).json({ message: 'Bus not found.' });
+        }
+
+        // Allow operators to access only their buses
+        if (req.user.role === 'operator' && bus.operatorId?.toString() !== req.user.userId) {
+            return res.status(403).json({ message: 'Access denied. You are not authorized to view this bus.' });
+        }
+
+        res.status(200).json({ message: 'Bus details retrieved successfully', bus });
+    } catch (error) {
+        console.error('Error fetching bus details:', error.message);
+        res.status(500).json({ message: 'Failed to fetch bus details', error: error.message });
+    }
+});
+
+/**
+ * @swagger
  * /operator/bus/{id}/schedule:
  *   put:
  *     summary: Update bus schedule
@@ -159,12 +205,6 @@ router.put('/bus/:id/stops', authenticate, authorize(['operator', 'admin']), asy
  *     responses:
  *       200:
  *         description: Bus replaced successfully
- *       400:
- *         description: Validation error or bus not found
- *       403:
- *         description: Access denied
- *       500:
- *         description: Internal server error
  */
 router.put('/bus/change', authenticate, authorize(['operator', 'admin']), async (req, res) => {
     const { oldBusNumber, newBusNumber } = req.body;
