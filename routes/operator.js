@@ -353,13 +353,29 @@ router.put('/bus/:id/details', authenticate, authorize(['operator', 'admin']), a
 
         const updatedStops = generateStopsWithFares(stops, priceNormal, priceLuxury);
 
+        // Preserve existing bookedSeats in the schedule
+        const preservedSchedule = schedule.map((updatedItem) => {
+            const existingItem = bus.schedule.find(
+                (item) => item.time === updatedItem.time && new Date(item.date).toISOString() === new Date(updatedItem.date).toISOString()
+            );
+
+            return existingItem
+                ? {
+                      ...updatedItem,
+                      bookedSeats: existingItem.bookedSeats,
+                      availableSeats:
+                          updatedItem.availableSeats - existingItem.bookedSeats.length,
+                  }
+                : updatedItem;
+        });
+
         bus.busNumber = busNumber;
         bus.operatorId = operatorId || bus.operatorId;
         bus.route = route;
         bus.priceNormal = priceNormal;
         bus.priceLuxury = priceLuxury;
         bus.stops = updatedStops;
-        bus.schedule = schedule;
+        bus.schedule = preservedSchedule;
 
         await bus.save();
 
@@ -369,6 +385,7 @@ router.put('/bus/:id/details', authenticate, authorize(['operator', 'admin']), a
         res.status(500).json({ message: 'Failed to update bus details', error: error.message });
     }
 });
+
 
 /**
  * @swagger
