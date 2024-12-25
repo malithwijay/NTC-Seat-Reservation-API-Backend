@@ -9,7 +9,7 @@ const router = express.Router();
  * @swagger
  * /payment/create-checkout-session:
  *   post:
- *     summary: Create a payment process for all unpaid bookings of the logged-in user
+ *     summary: Create a payment process for all unpaid bookings
  *     tags: [Payment]
  *     security:
  *       - bearerAuth: []
@@ -25,7 +25,7 @@ router.post('/create-checkout-session', authenticate, async (req, res) => {
         const bookings = await Booking.find({ userId, paymentStatus: 'unpaid' }).populate('busId');
 
         if (!bookings || bookings.length === 0) {
-            return res.status(404).json({ message: 'No unpaid bookings found for the user' });
+            return res.status(404).json({ message: 'No unpaid bookings found' });
         }
 
         // Aggregate total fare for all unpaid bookings
