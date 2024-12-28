@@ -5,7 +5,11 @@ module.exports = (io) => {
         try {
             const booking = await BookingService.createBooking(req.body);
             req.body.seatNumbers.forEach((seat) => {
-                io.emit('bookingUpdate', { busId: req.body.busId, seatNumber: seat, status: 'reserved' });
+                io.emit('bookingUpdate', {
+                    busNumber: req.body.busNumber,
+                    seatNumber: seat,
+                    status: 'reserved',
+                });
             });
             res.status(200).json({ message: 'Booking successful', booking });
         } catch (error) {
@@ -16,7 +20,7 @@ module.exports = (io) => {
 
     const getUserBookings = async (req, res) => {
         try {
-            const bookings = await BookingService.getUserBookings(req.params.userId);
+            const bookings = await BookingService.getUserBookings(req.params.userEmail);
             res.status(200).json(bookings);
         } catch (error) {
             console.error('Error fetching bookings:', error.message);

@@ -45,11 +45,15 @@ const router = express.Router();
  *                   properties:
  *                     date:
  *                       type: string
- *                     format: date-time
+ *                       format: date-time
  *                     time:
  *                       type: string
  *                     availableSeats:
  *                       type: number
+ *                     lockedSeats:
+ *                       type: array
+ *                       items:
+ *                         type: number
  *     responses:
  *       201:
  *         description: Route or bus added successfully
@@ -72,7 +76,7 @@ router.get('/routes', authenticate, authorize(['admin']), adminController.getRou
 
 /**
  * @swagger
- * /admin/bus/{id}/stops:
+ * /admin/bus/{busNumber}/stops:
  *   put:
  *     summary: Update stops for a specific bus
  *     tags: [Admin]
@@ -80,7 +84,7 @@ router.get('/routes', authenticate, authorize(['admin']), adminController.getRou
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: busNumber
  *         required: true
  *         schema:
  *           type: string
@@ -104,11 +108,11 @@ router.get('/routes', authenticate, authorize(['admin']), adminController.getRou
  *       200:
  *         description: Stops updated successfully
  */
-router.put('/bus/:id/stops', authenticate, authorize(['admin']), adminController.updateStops);
+router.put('/bus/:busNumber/stops', authenticate, authorize(['admin']), adminController.updateStops);
 
 /**
  * @swagger
- * /admin/permit/{busId}:
+ * /admin/permit/{busNumber}:
  *   put:
  *     summary: Grant or revoke a permit for a bus
  *     tags: [Admin]
@@ -116,7 +120,7 @@ router.put('/bus/:id/stops', authenticate, authorize(['admin']), adminController
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: busId
+ *         name: busNumber
  *         required: true
  *         schema:
  *           type: string
@@ -134,6 +138,6 @@ router.put('/bus/:id/stops', authenticate, authorize(['admin']), adminController
  *       200:
  *         description: Permit updated successfully
  */
-router.put('/permit/:busId', authenticate, authorize(['admin']), adminController.updatePermitStatus);
+router.put('/permit/:busNumber', authenticate, authorize(['admin']), adminController.updatePermitStatus);
 
 module.exports = router;

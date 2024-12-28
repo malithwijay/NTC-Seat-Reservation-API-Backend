@@ -2,7 +2,7 @@ const operatorService = require('../services/operatorService');
 
 exports.getBusDetails = async (req, res) => {
     try {
-        const bus = await operatorService.getBusDetails(req.params.id, req.user);
+        const bus = await operatorService.getBusDetails(req.params.busNumber, req.user);
         res.status(200).json({ message: 'Bus details retrieved successfully', bus });
     } catch (error) {
         console.error('Error fetching bus details:', error.message);
@@ -12,7 +12,7 @@ exports.getBusDetails = async (req, res) => {
 
 exports.updateSchedule = async (req, res) => {
     try {
-        const updatedBus = await operatorService.updateSchedule(req.params.id, req.body.schedule, req.user);
+        const updatedBus = await operatorService.updateSchedule(req.params.busNumber, req.body.schedule, req.user);
         res.status(200).json({ message: 'Schedule updated successfully', bus: updatedBus });
     } catch (error) {
         console.error('Error updating schedule:', error.message);
@@ -22,7 +22,7 @@ exports.updateSchedule = async (req, res) => {
 
 exports.updateStops = async (req, res) => {
     try {
-        const updatedBus = await operatorService.updateStops(req.params.id, req.body.stops, req.user);
+        const updatedBus = await operatorService.updateStops(req.params.busNumber, req.body.stops, req.user);
         res.status(200).json({ message: 'Stops updated successfully', bus: updatedBus });
     } catch (error) {
         console.error('Error updating stops:', error.message);
@@ -42,7 +42,7 @@ exports.replaceBus = async (req, res) => {
 
 exports.updateBusDetails = async (req, res) => {
     try {
-        const updatedBus = await operatorService.updateBusDetails(req.params.id, req.body, req.user);
+        const updatedBus = await operatorService.updateBusDetails(req.params.busNumber, req.body, req.user);
         res.status(200).json({ message: 'Bus details updated successfully', bus: updatedBus });
     } catch (error) {
         console.error('Error updating bus details:', error.message);

@@ -19,9 +19,9 @@ module.exports = (io) => {
      *           schema:
      *             type: object
      *             properties:
-     *               userId:
+     *               userEmail:
      *                 type: string
-     *               busId:
+     *               busNumber:
      *                 type: string
      *               seatNumbers:
      *                 type: array
@@ -32,6 +32,9 @@ module.exports = (io) => {
      *               busType:
      *                 type: string
      *                 enum: [normal, luxury]
+     *               date:
+     *                 type: string
+     *                 format: date-time
      *               time:
      *                 type: string
      *     responses:
@@ -42,13 +45,13 @@ module.exports = (io) => {
 
     /**
      * @swagger
-     * /booking/user/{userId}:
+     * /booking/user/{userEmail}:
      *   get:
      *     summary: Get bookings for a specific user
      *     tags: [Booking]
      *     parameters:
      *       - in: path
-     *         name: userId
+     *         name: userEmail
      *         required: true
      *         schema:
      *           type: string
@@ -56,7 +59,7 @@ module.exports = (io) => {
      *       200:
      *         description: List of bookings for the user
      */
-    router.get('/user/:userId', getUserBookings);
+    router.get('/user/:userEmail', getUserBookings);
 
     /**
      * @swagger
@@ -90,6 +93,9 @@ module.exports = (io) => {
      *                 enum: [normal, luxury]
      *               tripTime:
      *                 type: string
+     *               tripDate:
+     *                 type: string
+     *                 format: date-time
      *     responses:
      *       200:
      *         description: Booking updated successfully

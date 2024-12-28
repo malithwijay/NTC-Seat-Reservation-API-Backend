@@ -1,10 +1,16 @@
 const Bus = require('../models/bus');
 const crypto = require('crypto');
 
+/**
+ * Generate a unique permit ID for buses
+ */
 const generateUniquePermit = () => {
     return crypto.randomBytes(8).toString('hex');
 };
 
+/**
+ * Generate stops with all combinations and fares based on the provided stops
+ */
 const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
     const stopPairs = [];
     const totalStops = stops.length;
@@ -27,6 +33,9 @@ const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
     return stopPairs;
 };
 
+/**
+ * Add a new route or bus
+ */
 exports.addRoute = async (routeData) => {
     const { busNumber, route, priceNormal, priceLuxury, operatorId, stops, schedule } = routeData;
 
@@ -44,6 +53,19 @@ exports.addRoute = async (routeData) => {
     }
 
     const generatedStops = generateStopsWithFares(stops, priceNormal, priceLuxury);
+
+    // Process schedule to lock specific seats
+    const processedSchedule = schedule.map((item) => {
+        if (item.lockedSeats && Array.isArray(item.lockedSeats)) {
+            return {
+                ...item,
+                availableSeats: item.availableSeats - item.lockedSeats.length,
+                bookedSeats: [...item.lockedSeats],
+            };
+        }
+        return item;
+    });
+
     const newBus = new Bus({
         busNumber,
         route,
@@ -51,7 +73,7 @@ exports.addRoute = async (routeData) => {
         priceLuxury,
         operatorId,
         stops: generatedStops,
-        schedule,
+        schedule: processedSchedule,
         permitId: generateUniquePermit(),
         permitStatus: 'pending',
     });
@@ -61,32 +83,35 @@ exports.addRoute = async (routeData) => {
     return { message: 'New bus added successfully', bus: newBus };
 };
 
-exports.getRoutes = async () => {
-    return await Bus.find();
-};
-
-exports.updateStops = async (id, stops) => {
+/**
+ * Update stops for a specific bus
+ */
+exports.updateStops = async (busNumber, stops) => {
     if (!stops || !Array.isArray(stops)) {
         throw new Error('Invalid input. Stops must be an array.');
     }
 
-    const bus = await Bus.findById(id);
+    const bus = await Bus.findOne({ busNumber });
     if (!bus) {
         throw new Error('Bus not found.');
     }
 
-    bus.stops = stops;
+    const updatedStops = generateStopsWithFares(stops, bus.priceNormal, bus.priceLuxury);
+    bus.stops = updatedStops;
     await bus.save();
 
     return { message: 'Stops updated successfully', bus };
 };
 
-exports.updatePermitStatus = async (busId, permitStatus) => {
+/**
+ * Update the permit status of a bus
+ */
+exports.updatePermitStatus = async (busNumber, permitStatus) => {
     if (!['granted', 'revoked'].includes(permitStatus)) {
         throw new Error('Invalid permit status. Must be "granted" or "revoked".');
     }
 
-    const bus = await Bus.findById(busId);
+    const bus = await Bus.findOne({ busNumber });
     if (!bus) {
         throw new Error('Bus not found.');
     }
@@ -100,3 +125,8 @@ exports.updatePermitStatus = async (busId, permitStatus) => {
 
     return { message: `Permit ${permitStatus} successfully`, bus };
 };
+
+/**
+ * Export the generateStopsWithFares function for reuse in other services
+ */
+exports.generateStopsWithFares = generateStopsWithFares;

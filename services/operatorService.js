@@ -1,7 +1,8 @@
 const Bus = require('../models/bus');
+const { generateStopsWithFares } = require('./adminService'); // Correctly importing the function
 
-exports.getBusDetails = async (busId, user) => {
-    const bus = await Bus.findById(busId);
+exports.getBusDetails = async (busNumber, user) => {
+    const bus = await Bus.findOne({ busNumber });
     if (!bus) throw { statusCode: 404, message: 'Bus not found' };
 
     if (user.role === 'operator' && bus.operatorId?.toString() !== user.userId) {
@@ -10,8 +11,8 @@ exports.getBusDetails = async (busId, user) => {
     return bus;
 };
 
-exports.updateSchedule = async (busId, schedule, user) => {
-    const bus = await Bus.findById(busId);
+exports.updateSchedule = async (busNumber, schedule, user) => {
+    const bus = await Bus.findOne({ busNumber });
     if (!bus) throw { statusCode: 404, message: 'Bus not found' };
 
     if (user.role === 'operator' && bus.operatorId?.toString() !== user.userId) {
@@ -23,8 +24,8 @@ exports.updateSchedule = async (busId, schedule, user) => {
     return bus;
 };
 
-exports.updateStops = async (busId, stops, user) => {
-    const bus = await Bus.findById(busId);
+exports.updateStops = async (busNumber, stops, user) => {
+    const bus = await Bus.findOne({ busNumber });
     if (!bus) throw { statusCode: 404, message: 'Bus not found' };
 
     if (user.role === 'operator' && bus.operatorId?.toString() !== user.userId) {
@@ -53,8 +54,8 @@ exports.replaceBus = async (oldBusNumber, newBusNumber, user) => {
     return oldBus;
 };
 
-exports.updateBusDetails = async (busId, details, user) => {
-    const bus = await Bus.findById(busId);
+exports.updateBusDetails = async (busNumber, details, user) => {
+    const bus = await Bus.findOne({ busNumber });
     if (!bus) throw { statusCode: 404, message: 'Bus not found' };
 
     if (user.role === 'operator' && bus.operatorId?.toString() !== user.userId) {
@@ -71,8 +72,7 @@ exports.updateBusDetails = async (busId, details, user) => {
             ? {
                   ...updatedItem,
                   bookedSeats: existingItem.bookedSeats,
-                  availableSeats:
-                      updatedItem.availableSeats - existingItem.bookedSeats.length,
+                  availableSeats: updatedItem.availableSeats - existingItem.bookedSeats.length,
               }
             : updatedItem;
     });

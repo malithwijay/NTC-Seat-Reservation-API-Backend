@@ -1,13 +1,19 @@
 const Booking = require('../models/booking');
 const Bus = require('../models/bus');
+const User = require('../models/user');
 
 class BookingService {
     static async createBooking(data) {
-        const { userId, busId, seatNumbers, startStop, busType, time } = data;
+        const { userEmail, busNumber, seatNumbers, startStop, busType, date, time } = data;
 
-        const bus = await Bus.findById(busId);
+        const bus = await Bus.findOne({ busNumber });
         if (!bus) {
             throw new Error('Bus not found');
+        }
+
+        const user = await User.findOne({ email: userEmail });
+        if (!user) {
+            throw new Error('User not found');
         }
 
         const validStops = bus.stops.map((stop) => stop.name);
@@ -18,9 +24,11 @@ class BookingService {
         const stopDetails = bus.stops.find((stop) => stop.name === startStop);
         const fare = busType === 'luxury' ? stopDetails.fareLuxury : stopDetails.fareNormal;
 
-        const schedule = bus.schedule.find((s) => s.time === time);
+        const schedule = bus.schedule.find(
+            (s) => new Date(s.date).toISOString() === new Date(date).toISOString() && s.time === time
+        );
         if (!schedule) {
-            throw new Error('Invalid time. No trip is scheduled for the selected time.');
+            throw new Error('Invalid date or time. No trip is scheduled for the selected date and time.');
         }
 
         for (const seat of seatNumbers) {
@@ -35,13 +43,14 @@ class BookingService {
         await bus.save();
 
         const booking = new Booking({
-            userId,
-            busId,
+            userId: user._id,
+            busId: bus._id,
             seatNumbers,
             startStop,
             fare: fare * seatNumbers.length,
             busType,
             tripTime: time,
+            tripDate: date,
             status: 'confirmed',
         });
 
@@ -50,8 +59,13 @@ class BookingService {
         return booking;
     }
 
-    static async getUserBookings(userId) {
-        return Booking.find({ userId }).populate('busId', 'route');
+    static async getUserBookings(userEmail) {
+        const user = await User.findOne({ email: userEmail });
+        if (!user) {
+            throw new Error('User not found');
+        }
+
+        return Booking.find({ userId: user._id }).populate('busId', 'route');
     }
 
     static async updateBooking(id, data) {
@@ -65,9 +79,11 @@ class BookingService {
             throw new Error('Bus not found for the booking');
         }
 
-        const schedule = bus.schedule.find((s) => s.time === booking.tripTime);
+        const schedule = bus.schedule.find(
+            (s) => new Date(s.date).toISOString() === new Date(booking.tripDate).toISOString() && s.time === booking.tripTime
+        );
         if (!schedule) {
-            throw new Error('Invalid trip time. Schedule not found for the booking');
+            throw new Error('Invalid trip time or date. Schedule not found for the booking');
         }
 
         const oldSeatNumbers = booking.seatNumbers || [];
@@ -89,6 +105,7 @@ class BookingService {
         booking.startStop = data.startStop || booking.startStop;
         booking.busType = data.busType || booking.busType;
         booking.tripTime = data.tripTime || booking.tripTime;
+        booking.tripDate = data.tripDate || booking.tripDate;
 
         await booking.save();
 

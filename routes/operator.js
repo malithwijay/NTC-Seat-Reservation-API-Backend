@@ -6,7 +6,7 @@ const router = express.Router();
 
 /**
  * @swagger
- * /operator/bus/{id}:
+ * /operator/bus/{busNumber}:
  *   get:
  *     summary: Get details of a specific bus
  *     tags: [Operator, Admin]
@@ -14,11 +14,11 @@ const router = express.Router();
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: busNumber
  *         required: true
  *         schema:
  *           type: string
- *         description: Bus ID
+ *         description: Bus number
  *     responses:
  *       200:
  *         description: Bus details retrieved successfully
@@ -29,11 +29,11 @@ const router = express.Router();
  *       500:
  *         description: Internal server error
  */
-router.get('/bus/:id', authenticate, authorize(['operator', 'admin']), operatorController.getBusDetails);
+router.get('/bus/:busNumber', authenticate, authorize(['operator', 'admin']), operatorController.getBusDetails);
 
 /**
  * @swagger
- * /operator/bus/{id}/schedule:
+ * /operator/bus/{busNumber}/schedule:
  *   put:
  *     summary: Update bus schedule
  *     tags: [Operator, Admin]
@@ -41,11 +41,11 @@ router.get('/bus/:id', authenticate, authorize(['operator', 'admin']), operatorC
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: busNumber
  *         required: true
  *         schema:
  *           type: string
- *         description: Bus ID
+ *         description: Bus number
  *     requestBody:
  *       required: true
  *       content:
@@ -69,11 +69,11 @@ router.get('/bus/:id', authenticate, authorize(['operator', 'admin']), operatorC
  *       200:
  *         description: Schedule updated successfully
  */
-router.put('/bus/:id/schedule', authenticate, authorize(['operator', 'admin']), operatorController.updateSchedule);
+router.put('/bus/:busNumber/schedule', authenticate, authorize(['operator', 'admin']), operatorController.updateSchedule);
 
 /**
  * @swagger
- * /operator/bus/{id}/stops:
+ * /operator/bus/{busNumber}/stops:
  *   put:
  *     summary: Update bus stops
  *     tags: [Operator, Admin]
@@ -81,11 +81,11 @@ router.put('/bus/:id/schedule', authenticate, authorize(['operator', 'admin']), 
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: busNumber
  *         required: true
  *         schema:
  *           type: string
- *         description: Bus ID
+ *         description: Bus number
  *     requestBody:
  *       required: true
  *       content:
@@ -106,7 +106,7 @@ router.put('/bus/:id/schedule', authenticate, authorize(['operator', 'admin']), 
  *       200:
  *         description: Stops updated successfully
  */
-router.put('/bus/:id/stops', authenticate, authorize(['operator', 'admin']), operatorController.updateStops);
+router.put('/bus/:busNumber/stops', authenticate, authorize(['operator', 'admin']), operatorController.updateStops);
 
 /**
  * @swagger
@@ -137,7 +137,7 @@ router.put('/bus/change', authenticate, authorize(['operator', 'admin']), operat
 
 /**
  * @swagger
- * /operator/bus/{id}/details:
+ * /operator/bus/{busNumber}/details:
  *   put:
  *     summary: Update all details of a bus
  *     tags: [Operator, Admin]
@@ -145,11 +145,11 @@ router.put('/bus/change', authenticate, authorize(['operator', 'admin']), operat
  *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: busNumber
  *         required: true
  *         schema:
  *           type: string
- *         description: Bus ID
+ *         description: Bus number
  *     requestBody:
  *       required: true
  *       content:
@@ -192,7 +192,7 @@ router.put('/bus/change', authenticate, authorize(['operator', 'admin']), operat
  *       200:
  *         description: Bus details updated successfully
  */
-router.put('/bus/:id/details', authenticate, authorize(['operator', 'admin']), operatorController.updateBusDetails);
+router.put('/bus/:busNumber/details', authenticate, authorize(['operator', 'admin']), operatorController.updateBusDetails);
 
 /**
  * @swagger

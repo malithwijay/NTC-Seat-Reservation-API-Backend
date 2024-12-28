@@ -17,9 +17,9 @@ class BusService {
         }
     }
 
-    static async getBusById(id) {
+    static async getBusByNumber(busNumber) {
         try {
-            const bus = await Bus.findById(id);
+            const bus = await Bus.findOne({ busNumber });
             if (!bus) {
                 throw new Error('Bus not found');
             }

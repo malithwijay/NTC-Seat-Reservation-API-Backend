@@ -14,6 +14,7 @@ const ScheduleSchema = new mongoose.Schema({
     time: { type: String, required: true },
     availableSeats: { type: Number, default: 40 },
     bookedSeats: { type: [Number], default: [] },
+    lockedSeats: { type: [Number], default: [] }, // New field for locked seats
 });
 
 // Main bus schema
@@ -25,7 +26,7 @@ const BusSchema = new mongoose.Schema({
     priceNormal: { type: Number, required: true },
     priceLuxury: { type: Number, required: true },
     schedule: { type: [ScheduleSchema], required: true },
-    permitId: { type: String, default: null }, 
+    permitId: { type: String, default: null },
     permitStatus: { type: String, enum: ['pending', 'granted', 'revoked'], default: 'pending' },
 });
 

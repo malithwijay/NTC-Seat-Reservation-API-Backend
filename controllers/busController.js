@@ -20,10 +20,10 @@ class BusController {
         }
     }
 
-    static async getBusById(req, res) {
+    static async getBusByNumber(req, res) {
         try {
-            const { id } = req.params;
-            const bus = await BusService.getBusById(id);
+            const { busNumber } = req.params;
+            const bus = await BusService.getBusByNumber(busNumber);
             res.json(bus);
         } catch (error) {
             res.status(error.message === 'Bus not found' ? 404 : 500).json({ error: error.message });

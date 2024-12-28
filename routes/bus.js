@@ -36,21 +36,21 @@ router.get('/route/:route', BusController.getBusesByRoute);
 
 /**
  * @swagger
- * /bus/{id}:
+ * /bus/{busNumber}:
  *   get:
  *     summary: Get details of a specific bus
  *     tags: [Bus]
  *     parameters:
  *       - in: path
- *         name: id
+ *         name: busNumber
  *         required: true
  *         schema:
  *           type: string
- *         description: The bus ID
+ *         description: The bus number
  *     responses:
  *       200:
  *         description: Bus details
  */
-router.get('/:id', BusController.getBusById);
+router.get('/:busNumber', BusController.getBusByNumber);
 
 module.exports = router;

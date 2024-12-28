@@ -23,9 +23,9 @@ exports.getRoutes = async (req, res) => {
 
 exports.updateStops = async (req, res) => {
     try {
-        const { id } = req.params;
+        const { busNumber } = req.params;
         const stops = req.body.stops;
-        const result = await adminService.updateStops(id, stops);
+        const result = await adminService.updateStops(busNumber, stops);
         res.status(200).json(result);
     } catch (error) {
         console.error('Error updating stops:', error.message);
@@ -35,9 +35,9 @@ exports.updateStops = async (req, res) => {
 
 exports.updatePermitStatus = async (req, res) => {
     try {
-        const { busId } = req.params;
+        const { busNumber } = req.params;
         const { permitStatus } = req.body;
-        const result = await adminService.updatePermitStatus(busId, permitStatus);
+        const result = await adminService.updatePermitStatus(busNumber, permitStatus);
         res.status(200).json(result);
     } catch (error) {
         console.error('Error updating permit status:', error.message);
