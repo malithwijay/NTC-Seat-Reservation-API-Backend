@@ -1,15 +1,15 @@
 const mongoose = require('mongoose');
 
 const UserSchema = new mongoose.Schema({
-    name: String,
-    email: { type: String, unique: true },
-    password: String,
+    userId: { type: String, required: true, unique: true }, // Manually entered userId
+    name: { type: String, required: true },
+    email: { type: String, unique: true, required: true },
+    password: { type: String, required: true },
     role: { type: String, enum: ['commuter', 'operator', 'admin'], default: 'commuter' },
     profile: {
-        phone: String,
-        address: String,
+        phone: { type: String, default: null },
+        address: { type: String, default: null },
     },
 });
 
-// Check if the model already exists to prevent OverwriteModelError
 module.exports = mongoose.models.User || mongoose.model('User', UserSchema);

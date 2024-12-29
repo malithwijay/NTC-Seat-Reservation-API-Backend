@@ -14,7 +14,7 @@ const router = express.Router();
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Create checkout session created for all unpaid bookings
+ *         description: Checkout session created for all unpaid bookings
  */
 router.post('/create-checkout-session', authenticate, paymentController.createCheckoutSession);
 

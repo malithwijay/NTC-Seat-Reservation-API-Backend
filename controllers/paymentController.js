@@ -5,7 +5,7 @@ const paymentService = require('../services/paymentService');
  */
 exports.createCheckoutSession = async (req, res) => {
     try {
-        const userId = req.user.userId;
+        const userId = req.user.userId; // Retrieve the string userId (e.g., "COM-0001")
         const result = await paymentService.createCheckoutSession(userId);
         res.json(result);
     } catch (error) {

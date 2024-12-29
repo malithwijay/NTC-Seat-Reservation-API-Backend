@@ -39,11 +39,16 @@ class BookingService {
 
         schedule.availableSeats -= seatNumbers.length;
         schedule.bookedSeats.push(...seatNumbers);
-
         await bus.save();
 
+        const lastBooking = await Booking.findOne().sort({ createdAt: -1 });
+        const nextBookingId = lastBooking
+            ? `BK-${(parseInt(lastBooking.bookingId.split('-')[1]) + 1).toString().padStart(4, '0')}`
+            : 'BK-0001';
+
         const booking = new Booking({
-            userId: user._id,
+            bookingId: nextBookingId,
+            userId: user.userId, // Pass the string-based userId
             busId: bus._id,
             seatNumbers,
             startStop,
@@ -55,7 +60,6 @@ class BookingService {
         });
 
         await booking.save();
-
         return booking;
     }
 
@@ -65,11 +69,11 @@ class BookingService {
             throw new Error('User not found');
         }
 
-        return Booking.find({ userId: user._id }).populate('busId', 'route');
+        return Booking.find({ userId: user.userId }).populate('busId', 'route');
     }
 
-    static async updateBooking(id, data) {
-        const booking = await Booking.findById(id);
+    static async updateBooking(bookingId, data) {
+        const booking = await Booking.findOne({ bookingId });
         if (!booking) {
             throw new Error('Booking not found');
         }
@@ -108,7 +112,6 @@ class BookingService {
         booking.tripDate = data.tripDate || booking.tripDate;
 
         await booking.save();
-
         return booking;
     }
 }

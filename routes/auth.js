@@ -1,5 +1,6 @@
 const express = require('express');
 const authController = require('../controllers/authController');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
@@ -27,16 +28,8 @@ const router = express.Router();
  *     responses:
  *       200:
  *         description: User registered successfully
- *         content:
- *           application/json:
- *             example:
- *               message: "User registered successfully"
  *       400:
  *         description: Validation error or user already exists
- *         content:
- *           application/json:
- *             example:
- *               message: "Validation error or user already exists"
  */
 router.post('/register', authController.registerUser);
 
@@ -60,17 +53,48 @@ router.post('/register', authController.registerUser);
  *     responses:
  *       200:
  *         description: Login successful
- *         content:
- *           application/json:
- *             example:
- *               token: "your.jwt.token"
  *       401:
  *         description: Invalid credentials
- *         content:
- *           application/json:
- *             example:
- *               message: "Invalid credentials"
  */
 router.post('/login', authController.loginUser);
+
+/**
+ * @swagger
+ * /auth/admin/update/{userId}:
+ *   put:
+ *     summary: Update user details by admin
+ *     tags: [Auth]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: userId
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               name:
+ *                 type: string
+ *               email:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               address:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: User updated successfully
+ *       400:
+ *         description: Validation error
+ *       404:
+ *         description: User not found
+ */
+router.put('/admin/update/:userId', authenticate, authorize(['admin']), authController.updateUserByAdmin);
 
 module.exports = router;

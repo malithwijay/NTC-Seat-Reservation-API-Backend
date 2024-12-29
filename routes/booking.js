@@ -34,12 +34,16 @@ module.exports = (io) => {
      *                 enum: [normal, luxury]
      *               date:
      *                 type: string
-     *                 format: date-time
+     *                 format: date
      *               time:
      *                 type: string
      *     responses:
      *       200:
      *         description: Booking created successfully
+     *       400:
+     *         description: Validation error
+     *       500:
+     *         description: Internal server error
      */
     router.post('/book', createBooking);
 
@@ -58,12 +62,16 @@ module.exports = (io) => {
      *     responses:
      *       200:
      *         description: List of bookings for the user
+     *       404:
+     *         description: User not found
+     *       500:
+     *         description: Internal server error
      */
     router.get('/user/:userEmail', getUserBookings);
 
     /**
      * @swagger
-     * /booking/{id}:
+     * /booking/{bookingId}:
      *   put:
      *     summary: Update booking details
      *     tags: [Booking]
@@ -71,7 +79,7 @@ module.exports = (io) => {
      *       - bearerAuth: []
      *     parameters:
      *       - in: path
-     *         name: id
+     *         name: bookingId
      *         required: true
      *         schema:
      *           type: string
@@ -91,16 +99,20 @@ module.exports = (io) => {
      *               busType:
      *                 type: string
      *                 enum: [normal, luxury]
-     *               tripTime:
-     *                 type: string
      *               tripDate:
      *                 type: string
-     *                 format: date-time
+     *                 format: date
+     *               tripTime:
+     *                 type: string
      *     responses:
      *       200:
      *         description: Booking updated successfully
+     *       404:
+     *         description: Booking not found
+     *       500:
+     *         description: Internal server error
      */
-    router.put('/:id', authenticate, authorize(['admin', 'operator']), updateBooking);
+    router.put('/:bookingId', authenticate, authorize(['admin', 'operator']), updateBooking);
 
     return router;
 };

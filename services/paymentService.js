@@ -1,23 +1,20 @@
 const Booking = require('../models/booking');
-const Bus = require('../models/bus');
 
 /**
  * Create a payment process for all unpaid bookings.
  */
 exports.createCheckoutSession = async (userId) => {
-    // Fetch all unpaid bookings for the user
+    // Query using `userId` as a string
     const bookings = await Booking.find({ userId, paymentStatus: 'unpaid' }).populate('busId');
 
     if (!bookings || bookings.length === 0) {
         throw new Error('No unpaid bookings found');
     }
 
-    // Aggregate total fare for all unpaid bookings
     const totalFare = bookings.reduce((sum, booking) => sum + booking.fare, 0);
 
-    // Create checkout session details
     const sessionDetails = bookings.map((booking) => ({
-        bookingId: booking._id,
+        bookingId: booking.bookingId,
         busNumber: booking.busId?.busNumber || 'Unknown',
         route: booking.busId?.route || 'Unknown',
         seats: booking.seatNumbers,
@@ -35,7 +32,7 @@ exports.createCheckoutSession = async (userId) => {
  * Simulate a successful payment and update all unpaid bookings.
  */
 exports.handlePaymentSuccess = async (userId) => {
-    // Update all unpaid bookings for the user
+    // Query using `userId` as a string
     const updatedBookings = await Booking.updateMany(
         { userId, paymentStatus: 'unpaid' },
         { paymentStatus: 'paid', status: 'confirmed' }

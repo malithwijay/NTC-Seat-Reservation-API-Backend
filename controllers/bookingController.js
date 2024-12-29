@@ -30,7 +30,7 @@ module.exports = (io) => {
 
     const updateBooking = async (req, res) => {
         try {
-            const booking = await BookingService.updateBooking(req.params.id, req.body);
+            const booking = await BookingService.updateBooking(req.params.bookingId, req.body);
             res.status(200).json({ message: 'Booking updated successfully', booking });
         } catch (error) {
             console.error('Error updating booking:', error.message);
