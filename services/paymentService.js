@@ -20,6 +20,7 @@ exports.createCheckoutSession = async (userId) => {
         bookingId: booking.bookingId,
         busNumber: booking.busId?.busNumber || 'Unknown',
         route: booking.busId?.route || 'Unknown',
+        startStop: booking.startStop,
         seats: booking.seatNumbers,
         fare: booking.fare,
     }));
