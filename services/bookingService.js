@@ -71,6 +71,7 @@ class BookingService {
                 <li><strong>Booking ID:</strong> ${nextBookingId}</li>
                 <li><strong>Bus Number:</strong> ${busNumber}</li>
                 <li><strong>Route:</strong> ${bus.route}</li>
+                <li><strong>Start Stop:</strong> ${startStop}</li>
                 <li><strong>Seats:</strong> ${seatNumbers.join(', ')}</li>
                 <li><strong>Fare:</strong> Rs${fare * seatNumbers.length}</li>
                 <li><strong>Trip Date:</strong> ${date}</li>
