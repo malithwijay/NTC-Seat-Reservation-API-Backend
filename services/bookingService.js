@@ -8,14 +8,10 @@ class BookingService {
         const { userEmail, busNumber, seatNumbers, startStop, busType, date, time } = data;
 
         const bus = await Bus.findOne({ busNumber });
-        if (!bus) {
-            throw new Error('Bus not found');
-        }
+        if (!bus) throw new Error('Bus not found');
 
         const user = await User.findOne({ email: userEmail });
-        if (!user) {
-            throw new Error('User not found');
-        }
+        if (!user) throw new Error('User not found');
 
         const validStops = bus.stops.map((stop) => stop.name);
         if (!validStops.includes(startStop)) {
@@ -28,14 +24,10 @@ class BookingService {
         const schedule = bus.schedule.find(
             (s) => new Date(s.date).toISOString() === new Date(date).toISOString() && s.time === time
         );
-        if (!schedule) {
-            throw new Error('Invalid date or time. No trip is scheduled for the selected date and time.');
-        }
+        if (!schedule) throw new Error('Invalid date or time. No trip is scheduled for the selected date and time.');
 
         for (const seat of seatNumbers) {
-            if (schedule.bookedSeats.includes(seat)) {
-                throw new Error(`Seat ${seat} is already booked.`);
-            }
+            if (schedule.bookedSeats.includes(seat)) throw new Error(`Seat ${seat} is already booked.`);
         }
 
         schedule.availableSeats -= seatNumbers.length;
@@ -49,7 +41,7 @@ class BookingService {
 
         const booking = new Booking({
             bookingId: nextBookingId,
-            userId: user.userId, // Pass the string-based userId
+            userId: user.userId,
             busId: bus._id,
             seatNumbers,
             startStop,
@@ -62,7 +54,6 @@ class BookingService {
 
         await booking.save();
 
-        // Send confirmation email
         const emailContent = `
             <h1>Booking Confirmation</h1>
             <p>Dear ${user.name},</p>
@@ -77,7 +68,6 @@ class BookingService {
                 <li><strong>Trip Date:</strong> ${date}</li>
                 <li><strong>Trip Time:</strong> ${time}</li>
             </ul>
-            <p>Thank you for choosing our service!</p>
         `;
         await sendEmail(user.email, 'Booking Confirmation', emailContent);
 
@@ -86,30 +76,22 @@ class BookingService {
 
     static async getUserBookings(userEmail) {
         const user = await User.findOne({ email: userEmail });
-        if (!user) {
-            throw new Error('User not found');
-        }
+        if (!user) throw new Error('User not found');
 
         return Booking.find({ userId: user.userId }).populate('busId', 'route');
     }
 
     static async updateBooking(bookingId, data) {
         const booking = await Booking.findOne({ bookingId });
-        if (!booking) {
-            throw new Error('Booking not found');
-        }
+        if (!booking) throw new Error('Booking not found');
 
         const bus = await Bus.findById(booking.busId);
-        if (!bus) {
-            throw new Error('Bus not found for the booking');
-        }
+        if (!bus) throw new Error('Bus not found for the booking');
 
         const schedule = bus.schedule.find(
             (s) => new Date(s.date).toISOString() === new Date(booking.tripDate).toISOString() && s.time === booking.tripTime
         );
-        if (!schedule) {
-            throw new Error('Invalid trip time or date. Schedule not found for the booking');
-        }
+        if (!schedule) throw new Error('Invalid trip time or date. Schedule not found for the booking');
 
         const oldSeatNumbers = booking.seatNumbers || [];
         const newSeatNumbers = data.seatNumbers || oldSeatNumbers;
@@ -134,7 +116,6 @@ class BookingService {
 
         await booking.save();
 
-        // Send update email
         const user = await User.findOne({ userId: booking.userId });
         const emailContent = `
             <h1>Booking Updated</h1>
@@ -143,14 +124,62 @@ class BookingService {
             <ul>
                 <li><strong>Booking ID:</strong> ${booking.bookingId}</li>
                 <li><strong>Bus Number:</strong> ${bus.busNumber}</li>
+                <li><strong>Start Stop:</strong> ${booking.startStop}</li>
                 <li><strong>Seats:</strong> ${newSeatNumbers.join(', ')}</li>
-                <li><strong>Fare:</strong> $${(data.seatNumbers?.length || oldSeatNumbers.length) * (booking.fare / oldSeatNumbers.length)}</li>
+                <li><strong>Fare:</strong> Rs${(newSeatNumbers.length || oldSeatNumbers.length) * (booking.fare / oldSeatNumbers.length)}</li>
                 <li><strong>Trip Date:</strong> ${booking.tripDate}</li>
                 <li><strong>Trip Time:</strong> ${booking.tripTime}</li>
             </ul>
-            <p>Thank you for choosing our service!</p>
         `;
         await sendEmail(user.email, 'Booking Updated', emailContent);
+
+        return booking;
+    }
+
+    static async cancelBooking(bookingId, userId, role) {
+        const booking = await Booking.findOne({ bookingId });
+        if (!booking) throw new Error('Booking not found');
+
+        if (role !== 'admin' && booking.userId !== userId) {
+            throw new Error('Access denied. Only the admin or the booking owner can cancel this booking.');
+        }
+
+        const bus = await Bus.findById(booking.busId);
+        if (!bus) throw new Error('Bus not found for the booking');
+
+        const schedule = bus.schedule.find(
+            (s) => new Date(s.date).toISOString() === new Date(booking.tripDate).toISOString() && s.time === booking.tripTime
+        );
+        if (!schedule) throw new Error('Invalid trip time or date. Schedule not found for the booking');
+
+        booking.seatNumbers.forEach((seat) => {
+            const seatIndex = schedule.bookedSeats.indexOf(seat);
+            if (seatIndex !== -1) {
+                schedule.bookedSeats.splice(seatIndex, 1);
+                schedule.availableSeats += 1;
+            }
+        });
+
+        await bus.save();
+
+        booking.status = 'cancelled';
+        await booking.save();
+
+        const user = await User.findOne({ userId: booking.userId });
+        const emailContent = `
+            <h1>Booking Cancellation</h1>
+            <p>Dear ${user.name},</p>
+            <p>Your booking has been cancelled with the following details:</p>
+            <ul>
+                <li><strong>Booking ID:</strong> ${booking.bookingId}</li>
+                <li><strong>Bus Number:</strong> ${bus.busNumber}</li>
+                <li><strong>Start Stop:</strong> ${booking.startStop}</li>
+                <li><strong>Seats:</strong> ${booking.seatNumbers.join(', ')}</li>
+                <li><strong>Trip Date:</strong> ${booking.tripDate}</li>
+                <li><strong>Trip Time:</strong> ${booking.tripTime}</li>
+            </ul>
+        `;
+        await sendEmail(user.email, 'Booking Cancellation', emailContent);
 
         return booking;
     }

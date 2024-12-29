@@ -38,5 +38,17 @@ module.exports = (io) => {
         }
     };
 
-    return { createBooking, getUserBookings, updateBooking };
+    const cancelBooking = async (req, res) => {
+        try {
+            const userId = req.user.userId;
+            const role = req.user.role;
+            const booking = await BookingService.cancelBooking(req.params.bookingId, userId, role);
+            res.status(200).json({ message: 'Booking cancelled successfully', booking });
+        } catch (error) {
+            console.error('Error cancelling booking:', error.message);
+            res.status(500).json({ message: 'Failed to cancel booking', error: error.message });
+        }
+    };
+
+    return { createBooking, getUserBookings, updateBooking, cancelBooking };
 };

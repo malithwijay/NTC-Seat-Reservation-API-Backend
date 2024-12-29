@@ -26,10 +26,13 @@ const router = express.Router();
  *         description: Bus not found
  *       403:
  *         description: Access denied
- *       500:
- *         description: Internal server error
  */
-router.get('/bus/:busNumber', authenticate, authorize(['operator', 'admin']), operatorController.getBusDetails);
+router.get(
+    '/bus/:busNumber',
+    authenticate,
+    authorize(['operator', 'admin']),
+    operatorController.getBusDetails
+);
 
 /**
  * @swagger
@@ -65,11 +68,24 @@ router.get('/bus/:busNumber', authenticate, authorize(['operator', 'admin']), op
  *                       type: string
  *                     availableSeats:
  *                       type: number
+ *                     lockedSeats:
+ *                       type: array
+ *                       items:
+ *                         type: number
  *     responses:
  *       200:
  *         description: Schedule updated successfully
+ *       404:
+ *         description: Bus not found
+ *       403:
+ *         description: Access denied
  */
-router.put('/bus/:busNumber/schedule', authenticate, authorize(['operator', 'admin']), operatorController.updateSchedule);
+router.put(
+    '/bus/:busNumber/schedule',
+    authenticate,
+    authorize(['operator', 'admin']),
+    operatorController.updateSchedule
+);
 
 /**
  * @swagger
@@ -105,8 +121,17 @@ router.put('/bus/:busNumber/schedule', authenticate, authorize(['operator', 'adm
  *     responses:
  *       200:
  *         description: Stops updated successfully
+ *       404:
+ *         description: Bus not found
+ *       403:
+ *         description: Access denied
  */
-router.put('/bus/:busNumber/stops', authenticate, authorize(['operator', 'admin']), operatorController.updateStops);
+router.put(
+    '/bus/:busNumber/stops',
+    authenticate,
+    authorize(['operator', 'admin']),
+    operatorController.updateStops
+);
 
 /**
  * @swagger
@@ -132,8 +157,17 @@ router.put('/bus/:busNumber/stops', authenticate, authorize(['operator', 'admin'
  *     responses:
  *       200:
  *         description: Bus replaced successfully
+ *       404:
+ *         description: Old bus not found
+ *       400:
+ *         description: New bus number already in use
  */
-router.put('/bus/change', authenticate, authorize(['operator', 'admin']), operatorController.replaceBus);
+router.put(
+    '/bus/change',
+    authenticate,
+    authorize(['operator', 'admin']),
+    operatorController.replaceBus
+);
 
 /**
  * @swagger
@@ -188,11 +222,24 @@ router.put('/bus/change', authenticate, authorize(['operator', 'admin']), operat
  *                       type: string
  *                     availableSeats:
  *                       type: number
+ *                     lockedSeats:
+ *                       type: array
+ *                       items:
+ *                         type: number
  *     responses:
  *       200:
  *         description: Bus details updated successfully
+ *       404:
+ *         description: Bus not found
+ *       403:
+ *         description: Access denied
  */
-router.put('/bus/:busNumber/details', authenticate, authorize(['operator', 'admin']), operatorController.updateBusDetails);
+router.put(
+    '/bus/:busNumber/details',
+    authenticate,
+    authorize(['operator', 'admin']),
+    operatorController.updateBusDetails
+);
 
 /**
  * @swagger
@@ -205,7 +252,14 @@ router.put('/bus/:busNumber/details', authenticate, authorize(['operator', 'admi
  *     responses:
  *       200:
  *         description: Permit status retrieved successfully
+ *       404:
+ *         description: No buses found for the operator
  */
-router.get('/permit/status', authenticate, authorize(['operator']), operatorController.getPermitStatus);
+router.get(
+    '/permit/status',
+    authenticate,
+    authorize(['operator']),
+    operatorController.getPermitStatus
+);
 
 module.exports = router;

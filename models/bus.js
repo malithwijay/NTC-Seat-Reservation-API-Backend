@@ -14,13 +14,13 @@ const ScheduleSchema = new mongoose.Schema({
     time: { type: String, required: true },
     availableSeats: { type: Number, default: 40 },
     bookedSeats: { type: [Number], default: [] },
-    lockedSeats: { type: [Number], default: [] }, // New field for locked seats
+    lockedSeats: { type: [Number], default: [] }, 
 });
 
 // Main bus schema
 const BusSchema = new mongoose.Schema({
     busNumber: { type: String, required: true },
-    operatorId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+    operatorId: { type: String, required: true }, 
     route: { type: String, required: true },
     stops: { type: [StopSchema], required: true },
     priceNormal: { type: Number, required: true },

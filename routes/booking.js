@@ -4,7 +4,7 @@ const bookingController = require('../controllers/bookingController');
 
 module.exports = (io) => {
     const router = express.Router();
-    const { createBooking, getUserBookings, updateBooking } = bookingController(io);
+    const { createBooking, getUserBookings, updateBooking, cancelBooking } = bookingController(io);
 
     /**
      * @swagger
@@ -40,10 +40,6 @@ module.exports = (io) => {
      *     responses:
      *       200:
      *         description: Booking created successfully
-     *       400:
-     *         description: Validation error
-     *       500:
-     *         description: Internal server error
      */
     router.post('/book', createBooking);
 
@@ -62,10 +58,6 @@ module.exports = (io) => {
      *     responses:
      *       200:
      *         description: List of bookings for the user
-     *       404:
-     *         description: User not found
-     *       500:
-     *         description: Internal server error
      */
     router.get('/user/:userEmail', getUserBookings);
 
@@ -107,12 +99,28 @@ module.exports = (io) => {
      *     responses:
      *       200:
      *         description: Booking updated successfully
-     *       404:
-     *         description: Booking not found
-     *       500:
-     *         description: Internal server error
      */
     router.put('/:bookingId', authenticate, authorize(['admin', 'operator']), updateBooking);
+
+    /**
+     * @swagger
+     * /booking/{bookingId}/cancel:
+     *   delete:
+     *     summary: Cancel a booking
+     *     tags: [Booking]
+     *     security:
+     *       - bearerAuth: []
+     *     parameters:
+     *       - in: path
+     *         name: bookingId
+     *         required: true
+     *         schema:
+     *           type: string
+     *     responses:
+     *       200:
+     *         description: Booking cancelled successfully
+     */
+    router.delete('/:bookingId/cancel', authenticate, authorize(['admin', 'commuter']), cancelBooking);
 
     return router;
 };
