@@ -72,7 +72,7 @@ exports.handlePaymentSuccess = async (userId) => {
                     <strong>Booking ID:</strong> ${booking.bookingId}<br />
                     <strong>Bus Number:</strong> ${booking.busId?.busNumber || 'Unknown'}<br />
                     <strong>Route:</strong> ${booking.busId?.route || 'Unknown'}<br />
-                    <li><strong>Start Stop:</strong> ${startStop}</li>
+                    <strong>Start Stop:</strong> ${booking.startStop}<br />
                     <strong>Seats:</strong> ${booking.seatNumbers.join(', ')}<br />
                     <strong>Fare:</strong> Rs${booking.fare}<br />
                 </li>
