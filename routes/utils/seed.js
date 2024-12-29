@@ -6,7 +6,6 @@ const generateStopsWithFares = (stops, priceNormal, priceLuxury) => {
     const stopPairs = [];
     const totalStops = stops.length;
 
-    // Generate fare for each combination of stops
     for (let i = 0; i < totalStops; i++) {
         for (let j = i + 1; j < totalStops; j++) {
             const distance = stops[j].distance - stops[i].distance;
@@ -90,19 +89,23 @@ const seedDatabase = async () => {
     ];
 
     const buses = Array.from({ length: 25 }, (_, i) => {
-        const routeIndex = i % routes.length; // Distribute buses across 5 routes
+        const routeIndex = i % routes.length;
         const route = routes[routeIndex];
+        const operatorId = i % 2 === 0 ? 'OPE-0001' : 'OPE-0002'; // Alternate operator IDs
+        const busNumber = `NTC-${(i + 1).toString().padStart(4, '0')}`; // Generate busNumber
 
         return {
-            busNumber: `Bus-${i + 1}`,
+            busNumber, // Assign formatted busNumber
             route: route.route,
             priceNormal: route.priceNormal,
             priceLuxury: route.priceLuxury,
+            operatorId, // Add operatorId
             stops: generateStopsWithFares(route.stops, route.priceNormal, route.priceLuxury),
             schedule: Array.from({ length: 7 }, (_, j) => ({
-                date: new Date(Date.now() + j * 24 * 60 * 60 * 1000), // Schedules for the next 7 days
+                date: new Date(Date.now() + j * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // Format date as YYYY-MM-DD
                 time: `${8 + (j % 12)}:00 ${j % 2 === 0 ? 'AM' : 'PM'}`, // Rotating times
-                availableSeats: 40,
+                lockedSeats: [1, 2, 3, 4, 5], // Locked seats
+                availableSeats: 35, // Adjust available seats (40 - 5 locked seats)
                 bookedSeats: [],
             })),
         };

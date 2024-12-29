@@ -1,5 +1,4 @@
 const express = require('express');
-const { authenticate, authorize } = require('../middleware/authMiddleware');
 const commuterController = require('../controllers/commuterController');
 
 const router = express.Router();
@@ -16,7 +15,7 @@ const router = express.Router();
  *       200:
  *         description: Commuter profile details
  */
-router.get('/profile', authenticate, authorize(['commuter']), commuterController.getProfile);
+router.get('/profile', commuterController.getProfile);
 
 /**
  * @swagger
@@ -43,6 +42,41 @@ router.get('/profile', authenticate, authorize(['commuter']), commuterController
  *       200:
  *         description: Profile updated successfully
  */
-router.put('/profile', authenticate, authorize(['commuter']), commuterController.updateProfile);
+router.put('/profile', commuterController.updateProfile);
+
+/**
+ * @swagger
+ * /commuter/buses:
+ *   get:
+ *     summary: Retrieve buses based on route, date, and time
+ *     tags: [Commuter]
+ *     parameters:
+ *       - in: query
+ *         name: route
+ *         required: true
+ *         schema:
+ *           type: string
+ *       - in: query
+ *         name: date
+ *         required: true
+ *         schema:
+ *           type: string
+ *           format: date
+ *       - in: query
+ *         name: time
+ *         required: false
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: List of matching buses
+ *       400:
+ *         description: Invalid query parameters
+ *       404:
+ *         description: No buses found
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/buses', commuterController.getBusesByCriteria);
 
 module.exports = router;
