@@ -1,6 +1,7 @@
 const Booking = require('../models/booking');
 const Bus = require('../models/bus');
 const User = require('../models/user');
+const sendEmail = require('../routes/utils/emailService');
 
 class BookingService {
     static async createBooking(data) {
@@ -60,6 +61,25 @@ class BookingService {
         });
 
         await booking.save();
+
+        // Send confirmation email
+        const emailContent = `
+            <h1>Booking Confirmation</h1>
+            <p>Dear ${user.name},</p>
+            <p>Your booking has been confirmed with the following details:</p>
+            <ul>
+                <li><strong>Booking ID:</strong> ${nextBookingId}</li>
+                <li><strong>Bus Number:</strong> ${busNumber}</li>
+                <li><strong>Route:</strong> ${bus.route}</li>
+                <li><strong>Seats:</strong> ${seatNumbers.join(', ')}</li>
+                <li><strong>Fare:</strong> Rs${fare * seatNumbers.length}</li>
+                <li><strong>Trip Date:</strong> ${date}</li>
+                <li><strong>Trip Time:</strong> ${time}</li>
+            </ul>
+            <p>Thank you for choosing our service!</p>
+        `;
+        await sendEmail(user.email, 'Booking Confirmation', emailContent);
+
         return booking;
     }
 
@@ -112,6 +132,25 @@ class BookingService {
         booking.tripDate = data.tripDate || booking.tripDate;
 
         await booking.save();
+
+        // Send update email
+        const user = await User.findOne({ userId: booking.userId });
+        const emailContent = `
+            <h1>Booking Updated</h1>
+            <p>Dear ${user.name},</p>
+            <p>Your booking has been updated with the following details:</p>
+            <ul>
+                <li><strong>Booking ID:</strong> ${booking.bookingId}</li>
+                <li><strong>Bus Number:</strong> ${bus.busNumber}</li>
+                <li><strong>Seats:</strong> ${newSeatNumbers.join(', ')}</li>
+                <li><strong>Fare:</strong> $${(data.seatNumbers?.length || oldSeatNumbers.length) * (booking.fare / oldSeatNumbers.length)}</li>
+                <li><strong>Trip Date:</strong> ${booking.tripDate}</li>
+                <li><strong>Trip Time:</strong> ${booking.tripTime}</li>
+            </ul>
+            <p>Thank you for choosing our service!</p>
+        `;
+        await sendEmail(user.email, 'Booking Updated', emailContent);
+
         return booking;
     }
 }
