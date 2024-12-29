@@ -1,4 +1,5 @@
 const express = require('express');
+const { authenticate, authorize } = require('../middleware/authMiddleware');
 const commuterController = require('../controllers/commuterController');
 
 const router = express.Router();
@@ -15,7 +16,7 @@ const router = express.Router();
  *       200:
  *         description: Commuter profile details
  */
-router.get('/profile', commuterController.getProfile);
+router.get('/profile', authenticate, authorize(['commuter']), commuterController.getProfile);
 
 /**
  * @swagger
@@ -42,41 +43,44 @@ router.get('/profile', commuterController.getProfile);
  *       200:
  *         description: Profile updated successfully
  */
-router.put('/profile', commuterController.updateProfile);
+router.put('/profile', authenticate, authorize(['commuter']), commuterController.updateProfile);
 
 /**
  * @swagger
  * /commuter/buses:
  *   get:
- *     summary: Retrieve buses based on route, date, and time
+ *     summary: Get buses by route, date, and time
  *     tags: [Commuter]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: route
  *         required: true
  *         schema:
  *           type: string
+ *         description: The route of the bus
  *       - in: query
  *         name: date
- *         required: true
+ *         required: false
  *         schema:
  *           type: string
  *           format: date
+ *         description: The date of the bus schedule (YYYY-MM-DD)
  *       - in: query
  *         name: time
  *         required: false
  *         schema:
  *           type: string
+ *         description: The time of the bus schedule (e.g., "08:00 AM")
  *     responses:
  *       200:
- *         description: List of matching buses
- *       400:
- *         description: Invalid query parameters
+ *         description: List of buses matching the criteria
  *       404:
  *         description: No buses found
  *       500:
  *         description: Internal server error
  */
-router.get('/buses', commuterController.getBusesByCriteria);
+router.get('/buses', authenticate, authorize(['commuter']), commuterController.getBusesByCriteria);
 
 module.exports = router;

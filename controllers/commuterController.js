@@ -34,15 +34,11 @@ exports.updateProfile = async (req, res) => {
 exports.getBusesByCriteria = async (req, res) => {
     const { route, date, time } = req.query;
 
-    if (!route || !date) {
-        return res.status(400).json({ message: 'Route and date are required' });
-    }
-
     try {
         const buses = await commuterService.getBusesByCriteria({ route, date, time });
         res.status(200).json(buses);
     } catch (error) {
         console.error('Error fetching buses:', error.message);
-        res.status(error.statusCode || 500).json({ message: 'Failed to retrieve buses', error: error.message });
+        res.status(500).json({ message: 'Failed to retrieve buses', error: error.message });
     }
-};
+}; 
