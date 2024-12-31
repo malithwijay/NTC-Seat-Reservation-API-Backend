@@ -41,4 +41,4 @@ exports.getBusesByCriteria = async (req, res) => {
         console.error('Error fetching buses:', error.message);
         res.status(500).json({ message: 'Failed to retrieve buses', error: error.message });
     }
-}; 
+};

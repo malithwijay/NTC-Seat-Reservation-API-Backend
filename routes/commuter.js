@@ -51,8 +51,6 @@ router.put('/profile', authenticate, authorize(['commuter']), commuterController
  *   get:
  *     summary: Get buses by route, date, and time
  *     tags: [Commuter]
- *     security:
- *       - bearerAuth: []
  *     parameters:
  *       - in: query
  *         name: route
@@ -81,6 +79,6 @@ router.put('/profile', authenticate, authorize(['commuter']), commuterController
  *       500:
  *         description: Internal server error
  */
-router.get('/buses', authenticate, authorize(['commuter']), commuterController.getBusesByCriteria);
+router.get('/buses', commuterController.getBusesByCriteria); // Removed authenticate and authorize
 
 module.exports = router;

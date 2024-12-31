@@ -34,24 +34,18 @@ exports.updateProfile = async (userId, updates) => {
  * Get buses by route, date, and time
  */
 exports.getBusesByCriteria = async ({ route, date, time }) => {
-    console.log('Received Criteria:', { route, date, time });
-
     const query = { route };
     const matchConditions = {};
 
     // Ensure the date is formatted correctly
     if (date) {
         const formattedDate = new Date(date).toISOString().split('T')[0];
-        console.log('Formatted Date:', formattedDate);
         matchConditions['schedule.date'] = new Date(formattedDate);
     }
 
-    // Add time to match conditions if provided
     if (time) {
         matchConditions['schedule.time'] = time;
     }
-
-    console.log('Match Conditions:', matchConditions);
 
     const buses = await Bus.aggregate([
         { $match: query },
@@ -66,11 +60,9 @@ exports.getBusesByCriteria = async ({ route, date, time }) => {
         },
     ]);
 
-    console.log('Query Results:', buses);
-
     if (buses.length === 0) {
         throw new Error('No buses found matching the criteria');
     }
 
     return buses;
-}; 
+};
